@@ -27,10 +27,10 @@ Installation
         corner 2.2.3
         tqdm 4.67.1
 
-*   In addition to the git repository, you will need to download the bundle of neural networks that SpecFANN uses to generates models. These can be downloaded [here](https://cloud.iac.es/index.php/s/H7FdjCcJcaZJSzN).  For now, only one bundle is available corresponding to Milky Way metallicity: the `MW_v1.0.tgz` bundle (~2GB).  While SpecFANN is written in a way where the bundle can be stored in any location, we recommend that to begin, you place the bundle in the `models` folder within the git repo directory and untar it there.  By default, SpecFANN will look for the `MW_v1.0` bundle in the relative path (to specfann.py): `models/MW_v1.0`, but an alternative bundle and/or bundle file path can be specified later.
+*   In addition to the git repository, you will need to download the bundle of neural networks that SpecFANN uses to generates models. These can be downloaded [here](https://cloud.iac.es/index.php/s/H7FdjCcJcaZJSzN).  For now, only one bundle is available corresponding to Milky Way metallicity: the `MW_v1.0.tgz` bundle (~2GB).  While SpecFANN is written in a way where the bundle can be stored in any location, we recommend that to begin, you place the bundle in the `bundles` folder within the git repo directory and untar it there.  By default, SpecFANN will look for the `MW_v1.0` bundle in the relative path (to specfann.py): `models/MW_v1.0`, but an alternative bundle and/or bundle file path can be specified later.
 
-        mv ~/Downloads/MW_v1.0.tgz ~/SpecFANN/models/.
-        cd ~/SpecFANN/models/
+        mv ~/Downloads/MW_v1.0.tgz ~/SpecFANN/bundles/.
+        cd ~/SpecFANN/bundles/
         tar -xvzf MW_v1.0.tgz
 
 
