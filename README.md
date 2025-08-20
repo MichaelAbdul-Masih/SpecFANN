@@ -41,12 +41,12 @@ SpecFANN can be run directly in the git directory, or if you prefer, you can add
 To make sure the installation was successful, cd into the SpecFANN git directory, ensure you are in the correct conda environment, initiate a python instance and run the following commands:
 
         import specfann
-        fit = specfann.specfann() 
+        s = specfann.specfann() 
 
 If there is no error message following the second command, then things should be working properly.  If you placed the bundle in a different location than what was recommended above, then in the call to `specfann.specfann()`, you will need to pass the path to the bundle using the `bundle_path = ` argument:
 
         import specfann
-        fit = specfann.specfann(bundle_path = 'path/to/MW_v1.0') 
+        s = specfann.specfann(bundle_path = 'path/to/MW_v1.0') 
 
 
 Getting Started
