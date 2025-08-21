@@ -1,3 +1,6 @@
+__version__ = '0.1.0'
+
+
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' #Suppress TensorFlow warnings
 import numpy as np
@@ -9,7 +12,6 @@ from scipy.signal import fftconvolve
 from scipy.optimize import minimize
 from scipy import stats
 import corner
-# import pickle
 import dill as pickle
 import pyGA as GA
 from tqdm import trange
