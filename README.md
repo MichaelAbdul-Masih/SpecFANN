@@ -11,7 +11,7 @@ Installation
 
         git clone https://github.com/MichaelAbdul-Masih/SpecFANN.git
 
-*   SpecFANN is written in Python 3 and has several dependencies that are needed to make it run.  For your convenience, we have provided an environment file (SpecFANN_env.yml), which you can use to create an environment that already has all of these dependencies.  If you are using Anaconda you can create the environment as follows:
+*   SpecFANN is written in Python 3 and has several dependencies that are needed to make it run.  For your convenience, we have provided an environment file (SpecFANN_env.yml for linux users, or SpecFANN_env_macOS.yml for mac users), which you can use to create an environment that already has all of these dependencies.  If you are using Anaconda you can create the environment as follows:
 
         cd SpecFANN/
         conda env create -f SpecFANN_env.yml
