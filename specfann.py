@@ -123,6 +123,51 @@ def import_from_path(module_name, file_path):
     return module
 
 
+def install_bundle(bundle_name, bundle_path = None):
+    '''
+    Downloads and unpacks bundles from the cloud.
+    
+    Parameters:
+        bundle_name (str): The name of the bundle to download.
+        bundle_path (str, optional): The path where the bundle will be unpacked. 
+                                      If not provided, the bundle will be unpacked 
+                                      in the current directory.
+    Returns:
+        None: This function does not return any value. It performs the download 
+              and unpacking operation directly.
+    Raises:
+        OSError: If the curl command fails or if there are issues with the 
+                 network connection.
+    '''
+
+    # check that the ~/.specfann folder exists if bundle_path isn't specified
+    if bundle_path == None:
+        local_path = os.path.expanduser('~/.specfann')
+        bundle_path = os.path.join(local_path, 'bundles')
+        if not os.path.exists(local_path):
+            os.makedirs(local_path)
+        if not os.path.exists(bundle_path):
+            os.makedirs(bundle_path)
+
+    # define local bundle name for convenience
+    local_bundle_name=os.path.join(bundle_path, '{}.tgz'.format(bundle_name))
+    
+    # download the bundle
+    print('Downloading bundle {}... This could take several minutes'.format(bundle_name))
+    os.system('curl --progress-bar -u "H7FdjCcJcaZJSzN:" -H "X-Requested-With: XMLHttpRequest" "https://cloud.iac.es/public.php/webdav/{bundle_name}.tgz" -o {local_bundle_name}'.format(bundle_name=bundle_name, local_bundle_name=local_bundle_name))
+    
+    # check that the bundle exists
+    if os.path.getsize(local_bundle_name) < 10000:
+        os.remove(local_bundle_name)
+        raise FileNotFoundError('The bundle "{bundle_name}" does not exist on the cloud.')
+    
+    # unpack the bundle
+    os.system('tar -xzf {local_bundle_name} -C {bundle_path}'.format(local_bundle_name=local_bundle_name, bundle_path=bundle_path))
+    
+    # clean up
+    os.remove(local_bundle_name)
+
+
 class parameters(object):
     """
     Class to hold the parameters for the model
@@ -252,9 +297,15 @@ class specfann(object):
 
         if bundle_path is None:
             if bundle_name is None:
-                bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/MW_v1.0/')
+                if os.path.exists(os.path.expanduser('~/.specfann/bundles/MW_v1.1/')):
+                    bundle_path = os.path.expanduser('~/.specfann/bundles/MW_v1.1/')
+                else:
+                    bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/MW_v1.0/')
             else:
-                bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/%s/' % bundle_name)
+                if os.path.exists(os.path.expanduser('~/.specfann/bundles/{}/'.format(bundle_name))):
+                    bundle_path = os.path.expanduser('~/.specfann/bundles/{}/'.format(bundle_name))
+                else:
+                    bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/%s/' % bundle_name)
         self.set_nn_bundle_path(bundle_path)
 
         self.line_list = {}
