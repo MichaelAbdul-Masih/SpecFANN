@@ -1300,7 +1300,7 @@ class specfann(object):
             plt.show()
 
     
-    def print_GA_results(self, ga_results=None):
+    def print_GA_results(self, ga_results=None, filename=None):
         """
         Print the results of the genetic algorithm.
 
@@ -1321,3 +1321,8 @@ class specfann(object):
         print(f"Best fitness: {self.GA_results.best_fitness}")
         print(f"Number of generations: {self.GA_results.n_generations}")
         print(f"Population size: {self.GA_results.population_size}")
+
+        if filename is not None:
+            with open(filename, 'w') as f:
+                for i, param in enumerate(self.free_parameters):
+                    f.write(f"{param} {ga_results.best_fit_model[i]} {ga_results.best_fit_errors[i][0]} {ga_results.best_fit_errors[i][1]}\n")
