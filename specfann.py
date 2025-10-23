@@ -1,4 +1,4 @@
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 
 import os
@@ -95,7 +95,7 @@ def open_project(filename, bundle_path=None, bundle_name=None):
 
     if bundle_path is None:
         if bundle_name is None:
-            bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/MW_v1.0/')
+            bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/MW_v1.1/')
         else:
             bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/%s/' % bundle_name)
     sys.path.append(bundle_path)
@@ -121,6 +121,51 @@ def import_from_path(module_name, file_path):
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def install_bundle(bundle_name, bundle_path = None):
+    '''
+    Downloads and unpacks bundles from the cloud.
+    
+    Parameters:
+        bundle_name (str): The name of the bundle to download.
+        bundle_path (str, optional): The path where the bundle will be unpacked. 
+                                      If not provided, the bundle will be unpacked 
+                                      in the current directory.
+    Returns:
+        None: This function does not return any value. It performs the download 
+              and unpacking operation directly.
+    Raises:
+        OSError: If the curl command fails or if there are issues with the 
+                 network connection.
+    '''
+
+    # check that the ~/.specfann folder exists if bundle_path isn't specified
+    if bundle_path == None:
+        local_path = os.path.expanduser('~/.specfann')
+        bundle_path = os.path.join(local_path, 'bundles')
+        if not os.path.exists(local_path):
+            os.makedirs(local_path)
+        if not os.path.exists(bundle_path):
+            os.makedirs(bundle_path)
+
+    # define local bundle name for convenience
+    local_bundle_name=os.path.join(bundle_path, '{}.tgz'.format(bundle_name))
+    
+    # download the bundle
+    print('Downloading bundle {}... This could take several minutes'.format(bundle_name))
+    os.system('curl --progress-bar -u "H7FdjCcJcaZJSzN:" -H "X-Requested-With: XMLHttpRequest" "https://cloud.iac.es/public.php/webdav/{bundle_name}.tgz" -o {local_bundle_name}'.format(bundle_name=bundle_name, local_bundle_name=local_bundle_name))
+    
+    # check that the bundle exists
+    if os.path.getsize(local_bundle_name) < 10000:
+        os.remove(local_bundle_name)
+        raise FileNotFoundError('The bundle "{bundle_name}" does not exist on the cloud.')
+    
+    # unpack the bundle
+    os.system('tar -xzf {local_bundle_name} -C {bundle_path}'.format(local_bundle_name=local_bundle_name, bundle_path=bundle_path))
+    
+    # clean up
+    os.remove(local_bundle_name)
 
 
 class parameters(object):
@@ -252,9 +297,15 @@ class specfann(object):
 
         if bundle_path is None:
             if bundle_name is None:
-                bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/MW_v1.0/')
+                if os.path.exists(os.path.expanduser('~/.specfann/bundles/MW_v1.1/')):
+                    bundle_path = os.path.expanduser('~/.specfann/bundles/MW_v1.1/')
+                else:
+                    bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/MW_v1.1/')
             else:
-                bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/%s/' % bundle_name)
+                if os.path.exists(os.path.expanduser('~/.specfann/bundles/{}/'.format(bundle_name))):
+                    bundle_path = os.path.expanduser('~/.specfann/bundles/{}/'.format(bundle_name))
+                else:
+                    bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/%s/' % bundle_name)
         self.set_nn_bundle_path(bundle_path)
 
         self.line_list = {}
@@ -322,8 +373,8 @@ class specfann(object):
 
             self.mean, self.std = np.loadtxt(self.nn_bundle_path + 'norm_array_fw.txt')
         except ImportError:
-            if nn_bundle_path == 'bundles/MW_v1.0/':
-                print("No specfann bundle found in the default relative path 'bundles/MW_v1.0/'. Please ensure you have downloaded the bundle and in the correct place.  For more information, please see setup instructions at https://github.com/MichaelAbdul-Masih/SpecFANN")
+            if nn_bundle_path == 'bundles/MW_v1.1/':
+                print("No specfann bundle found in the default relative path 'bundles/MW_v1.1/'. Please ensure you have downloaded the bundle and in the correct place.  For more information, please see setup instructions at https://github.com/MichaelAbdul-Masih/SpecFANN")
             else:
                 print(f"Could not import specfann bundle functions from {nn_bundle_path}. Please check the path to the bundle is properly set.")
 
@@ -822,7 +873,7 @@ class specfann(object):
         vrot_ind = list(self.parameters.__dict__.keys()).index('vrot')
         gamma_ind = list(self.parameters.__dict__.keys()).index('gamma')
 
-        subplots_dict = {1:[1, 1], 2:[1, 2], 3:[1,3], 4:[2, 2], 5:[2, 3], 6:[2,3], 7:[2,4], 8:[2,4], 9:[3,3], 10:[3, 4], 11:[3, 4], 12:[3, 4], 13:[3, 5], 14:[3, 5], 15:[3, 5], 16:[4,4]}
+        subplots_dict = {1:[1, 1], 2:[1, 2], 3:[1,3], 4:[2, 2], 5:[2, 3], 6:[2,3], 7:[2,4], 8:[2,4], 9:[3,3], 10:[3, 4], 11:[3, 4], 12:[3, 4], 13:[3, 5], 14:[3, 5], 15:[3, 5], 16:[4,4], 17:[4,5], 18:[4,5], 19:[4,5], 20:[4,5], 21:[4,6], 22:[4,6], 23:[4,6], 24:[4,6], 25:[5,5], 26:[5,6], 27:[5,6], 28:[5,6], 29:[5,6], 30:[5,6], 31:[5,7], 32:[5,7], 33:[5,7], 34:[5,7], 35:[5,7], 36:[6,6], 37:[6,7], 38:[6,7], 39:[6,7], 40:[6,7], 41:[6,8], 42:[6,8], 43:[6,8], 44:[6,8], 45:[6,8]}
         fig, axs = plt.subplots(subplots_dict[len(self.line_list)][0], subplots_dict[len(self.line_list)][1], figsize=(subplots_dict[len(self.line_list)][1]*4, subplots_dict[len(self.line_list)][0]*4))
         axs = axs.ravel()
 
@@ -919,7 +970,7 @@ class specfann(object):
         vrot_ind = list(self.parameters.__dict__.keys()).index('vrot')
         gamma_ind = list(self.parameters.__dict__.keys()).index('gamma')
 
-        subplots_dict = {1:[1, 1], 2:[1, 2], 3:[1,3], 4:[2, 2], 5:[2, 3], 6:[2,3], 7:[2,4], 8:[2,4], 9:[3,3], 10:[3, 4], 11:[3, 4], 12:[3, 4], 13:[3, 5], 14:[3, 5], 15:[3, 5], 16:[4,4]}
+        subplots_dict = {1:[1, 1], 2:[1, 2], 3:[1,3], 4:[2, 2], 5:[2, 3], 6:[2,3], 7:[2,4], 8:[2,4], 9:[3,3], 10:[3, 4], 11:[3, 4], 12:[3, 4], 13:[3, 5], 14:[3, 5], 15:[3, 5], 16:[4,4], 17:[4,5], 18:[4,5], 19:[4,5], 20:[4,5], 21:[4,6], 22:[4,6], 23:[4,6], 24:[4,6], 25:[5,5], 26:[5,6], 27:[5,6], 28:[5,6], 29:[5,6], 30:[5,6], 31:[5,7], 32:[5,7], 33:[5,7], 34:[5,7], 35:[5,7], 36:[6,6], 37:[6,7], 38:[6,7], 39:[6,7], 40:[6,7], 41:[6,8], 42:[6,8], 43:[6,8], 44:[6,8], 45:[6,8]}
         fig, axs = plt.subplots(subplots_dict[len(self.line_list)][0], subplots_dict[len(self.line_list)][1], figsize=(subplots_dict[len(self.line_list)][1]*4, subplots_dict[len(self.line_list)][0]*4))
         axs = axs.ravel()
 
@@ -1136,7 +1187,7 @@ class specfann(object):
             ga_results = self.GA_results
 
 
-        subplots_dict = {1:[1, 1], 2:[1, 2], 3:[1,3], 4:[2, 2], 5:[2, 3], 6:[2,3], 7:[2,4], 8:[2,4], 9:[3,3], 10:[3, 4], 11:[3, 4], 12:[3, 4], 13:[3, 5], 14:[3, 5], 15:[3, 5], 16:[4,4]}
+        subplots_dict = {1:[1, 1], 2:[1, 2], 3:[1,3], 4:[2, 2], 5:[2, 3], 6:[2,3], 7:[2,4], 8:[2,4], 9:[3,3], 10:[3, 4], 11:[3, 4], 12:[3, 4], 13:[3, 5], 14:[3, 5], 15:[3, 5], 16:[4,4], 17:[4,5], 18:[4,5], 19:[4,5], 20:[4,5], 21:[4,6], 22:[4,6], 23:[4,6], 24:[4,6], 25:[5,5], 26:[5,6], 27:[5,6], 28:[5,6], 29:[5,6], 30:[5,6], 31:[5,7], 32:[5,7], 33:[5,7], 34:[5,7], 35:[5,7], 36:[6,6], 37:[6,7], 38:[6,7], 39:[6,7], 40:[6,7], 41:[6,8], 42:[6,8], 43:[6,8], 44:[6,8], 45:[6,8]}
         fig, axs = plt.subplots(subplots_dict[len(ga_results.free_parameters)][0], subplots_dict[len(ga_results.free_parameters)][1], figsize=(subplots_dict[len(ga_results.free_parameters)][1]*4, subplots_dict[len(ga_results.free_parameters)][0]*3))
         axs = axs.ravel()
 
@@ -1213,7 +1264,7 @@ class specfann(object):
         gamma_ind = list(self.parameters.__dict__.keys()).index('gamma')
 
 
-        subplots_dict = {1:[1, 1], 2:[1, 2], 3:[1,3], 4:[2, 2], 5:[2, 3], 6:[2,3], 7:[2,4], 8:[2,4], 9:[3,3], 10:[3, 4], 11:[3, 4], 12:[3, 4], 13:[3, 5], 14:[3, 5], 15:[3, 5], 16:[4,4]}
+        subplots_dict = {1:[1, 1], 2:[1, 2], 3:[1,3], 4:[2, 2], 5:[2, 3], 6:[2,3], 7:[2,4], 8:[2,4], 9:[3,3], 10:[3, 4], 11:[3, 4], 12:[3, 4], 13:[3, 5], 14:[3, 5], 15:[3, 5], 16:[4,4], 17:[4,5], 18:[4,5], 19:[4,5], 20:[4,5], 21:[4,6], 22:[4,6], 23:[4,6], 24:[4,6], 25:[5,5], 26:[5,6], 27:[5,6], 28:[5,6], 29:[5,6], 30:[5,6], 31:[5,7], 32:[5,7], 33:[5,7], 34:[5,7], 35:[5,7], 36:[6,6], 37:[6,7], 38:[6,7], 39:[6,7], 40:[6,7], 41:[6,8], 42:[6,8], 43:[6,8], 44:[6,8], 45:[6,8]}
         fig, axs = plt.subplots(subplots_dict[len(self.line_list)][0], subplots_dict[len(self.line_list)][1], figsize=(subplots_dict[len(self.line_list)][1]*4, subplots_dict[len(self.line_list)][0]*3))
         axs = axs.ravel()
 
@@ -1249,7 +1300,7 @@ class specfann(object):
             plt.show()
 
     
-    def print_GA_results(self, ga_results=None):
+    def print_GA_results(self, ga_results=None, filename=None):
         """
         Print the results of the genetic algorithm.
 
@@ -1270,3 +1321,8 @@ class specfann(object):
         print(f"Best fitness: {self.GA_results.best_fitness}")
         print(f"Number of generations: {self.GA_results.n_generations}")
         print(f"Population size: {self.GA_results.population_size}")
+
+        if filename is not None:
+            with open(filename, 'w') as f:
+                for i, param in enumerate(self.free_parameters):
+                    f.write(f"{param} {ga_results.best_fit_model[i]} {ga_results.best_fit_errors[i][0]} {ga_results.best_fit_errors[i][1]}\n")
