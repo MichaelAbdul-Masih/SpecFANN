@@ -1,4 +1,4 @@
-# SpecFANN 0.1.0
+# SpecFANN 0.1.1
 
 Introduction
 ------------
@@ -27,7 +27,12 @@ Installation
         corner 2.2.3
         tqdm 4.67.1
 
-*   In addition to the git repository, you will need to download the bundle of neural networks that SpecFANN uses to generates models. These can be downloaded [here](https://cloud.iac.es/index.php/s/H7FdjCcJcaZJSzN).  For now, only one bundle is available corresponding to Milky Way metallicity: the `MW_v1.0.tgz` bundle (~2GB).  While SpecFANN is written in a way where the bundle can be stored in any location, we recommend that to begin, you place the bundle in the `bundles` folder within the git repo directory and untar it there.  By default, SpecFANN will look for the `MW_v1.0` bundle in the relative path (to specfann.py): `models/MW_v1.0`, but an alternative bundle and/or bundle file path can be specified later.
+*   In addition to the git repository, you will need to download the bundle of neural networks that SpecFANN uses to generates models. These can be downloaded [here](https://cloud.iac.es/index.php/s/H7FdjCcJcaZJSzN).  Alternatively, we have provided a convenience function that will retrieve the bundles directly from the cloud and store them in the default directory `~/.specfann/bundles/`.  This can be done by calling the following specfann function: 
+
+        import specfann
+        specfann.install_bundle(bundle_name, bundle_path = None)
+
+Where `bundle_name` is the name of the bundle and `bundle_path` is an optional parameter if you prefer to store the bundle in a location different than the default.  For now, two bundles are available corresponding to Milky Way and SMC metallicity: the `MW_v1.1.tgz` and `SMC_v1.0` bundles (~2GB each).  While SpecFANN is written in a way where the bundle can be stored in any location, we recommend that to begin, you use the convenience function provided above, however if you wish to set up the bundles manually, you can place the bundle in the `bundles` folder within the git repo directory and untar it there.  By default, SpecFANN will look for the `MW_v1.1` bundle first in the `~/.specfann/bundles/` directory and second in the relative path (to specfann.py): `models/MW_v1.1`, but an alternative bundle and/or bundle file path can be specified later.
 
         mv ~/Downloads/MW_v1.0.tgz ~/SpecFANN/bundles/.
         cd ~/SpecFANN/bundles/
@@ -52,3 +57,15 @@ If there is no error message following the second command, then things should be
 Getting Started
 ---------------
 We've prepared a jupyter notebook that shows the SpecFANN workflow, and what customization options are available to fit your specific science case.  This can be found in the `SpecFANN_Tutorial.ipynb` notebook in the base SpecFANN directory.  We recommend that you start here to learn the basics.
+
+
+Change Log
+---------------
+
+### 0.1.1 - fit plot bugfix/change to bundle location
+
+* Fixed bug where if more than 16 lines were used in a fit simultaneously, the XXX_plot_fit functions would fail.  The number of lines has been increased to 45
+* Added support for downloading bundles from the cloud directly using specfann.install_bundle(bundle_name, bundle_path).  Also, the default bundle has been updated from `MW_v1.0` to `MW_v1.1`
+* Added option to output GA results to a text file. 
+
+### 0.1.0 - Initialization of SpecFANN repo

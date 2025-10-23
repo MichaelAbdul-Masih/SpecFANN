@@ -1,4 +1,4 @@
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 
 import os
@@ -95,7 +95,7 @@ def open_project(filename, bundle_path=None, bundle_name=None):
 
     if bundle_path is None:
         if bundle_name is None:
-            bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/MW_v1.0/')
+            bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/MW_v1.1/')
         else:
             bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/%s/' % bundle_name)
     sys.path.append(bundle_path)
@@ -300,7 +300,7 @@ class specfann(object):
                 if os.path.exists(os.path.expanduser('~/.specfann/bundles/MW_v1.1/')):
                     bundle_path = os.path.expanduser('~/.specfann/bundles/MW_v1.1/')
                 else:
-                    bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/MW_v1.0/')
+                    bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/MW_v1.1/')
             else:
                 if os.path.exists(os.path.expanduser('~/.specfann/bundles/{}/'.format(bundle_name))):
                     bundle_path = os.path.expanduser('~/.specfann/bundles/{}/'.format(bundle_name))
@@ -373,8 +373,8 @@ class specfann(object):
 
             self.mean, self.std = np.loadtxt(self.nn_bundle_path + 'norm_array_fw.txt')
         except ImportError:
-            if nn_bundle_path == 'bundles/MW_v1.0/':
-                print("No specfann bundle found in the default relative path 'bundles/MW_v1.0/'. Please ensure you have downloaded the bundle and in the correct place.  For more information, please see setup instructions at https://github.com/MichaelAbdul-Masih/SpecFANN")
+            if nn_bundle_path == 'bundles/MW_v1.1/':
+                print("No specfann bundle found in the default relative path 'bundles/MW_v1.1/'. Please ensure you have downloaded the bundle and in the correct place.  For more information, please see setup instructions at https://github.com/MichaelAbdul-Masih/SpecFANN")
             else:
                 print(f"Could not import specfann bundle functions from {nn_bundle_path}. Please check the path to the bundle is properly set.")
 
