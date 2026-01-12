@@ -1,4 +1,4 @@
-# SpecFANN 0.1.1
+# SpecFANN 0.1.2
 
 Introduction
 ------------
@@ -61,6 +61,10 @@ We've prepared a jupyter notebook that shows the SpecFANN workflow, and what cus
 
 Change Log
 ---------------
+
+### 0.1.2 - fit plot bugfix/change to bundle location
+
+* vectorized rotational broadening function
 
 ### 0.1.1 - fit plot bugfix/change to bundle location
 

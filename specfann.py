@@ -1,4 +1,4 @@
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 
 import os
@@ -78,6 +78,38 @@ def rotational_broadening(wave_spec,flux_spec,vrot,fwhm=0.25,epsilon=0.6, return
         wave_conv = np.exp(velo_)
         return wave_spec, np.interp(wave_spec, wave_conv, 1-flux_conv, right=1, left=1)
     return wave_spec,flux_spec
+
+
+def rotational_broadening_vectorized(wave_spec,fluxes,vrots,epsilon=0.6):
+    
+    # convert wavelength array into velocity space, and ensure it is equidistant
+    wave_ = np.log(wave_spec)
+    velo_ = np.linspace(wave_[0],wave_[-1],len(wave_))
+    dvelo = velo_[1]-velo_[0]
+    vrots_new = vrots/(299792.458)
+
+    f = si.interp1d(wave_, fluxes, fill_value=np.array([1.0]), bounds_error=False)
+    fluxes_ = f(velo_)
+
+    # compute the convolution kernel and normalise it
+    n = int(2*np.max(vrots_new)/dvelo)
+    velo_k = np.arange(n)*dvelo
+    velo_k -= velo_k[-1]/2.
+
+    y = 1 - (velo_k[None,:]/vrots_new[:,None])**2 # transformation of velocity
+    y[y<0]=0
+
+    K = (2*(1-epsilon)*np.sqrt(y)+np.pi*epsilon/2.*y)/(np.pi*vrots_new[:,None]*(1-epsilon/3.0))
+    K /= K.sum(axis=1)[:,None]
+
+    flux_conv = fftconvolve(1-fluxes_,K,mode='same', axes=1)
+    inds = np.isnan(flux_conv)
+    if np.any(inds):
+        flux_conv[inds] = 1 - fluxes[inds]
+
+    f = si.interp1d(np.exp(velo_), 1-flux_conv, fill_value=np.array([1.0]), bounds_error=False)
+    broadened_fluxes = f(wave_spec)
+    return wave_spec, broadened_fluxes
 
 
 def open_project(filename, bundle_path=None, bundle_name=None):
@@ -559,11 +591,13 @@ class specfann(object):
         new_wavelength = np.arange(wavelength[0], wavelength[-1], 0.01)
         unbroadened_fluxes = si.interp1d(wavelength, fluxes, bounds_error=False, fill_value=(1.0,1.0))(new_wavelength)
 
-        broadened_wavelengths, broadened_fluxes = [],[]
-        for i in range(len(unbroadened_fluxes)):
-            broadened_wavelength, broadened_flux = rotational_broadening(new_wavelength, unbroadened_fluxes[i], vrot[i])
-            broadened_wavelengths.append(broadened_wavelength)
-            broadened_fluxes.append(broadened_flux)
+        broadened_wavelength, broadened_fluxes = rotational_broadening_vectorized(new_wavelength, unbroadened_fluxes, vrot)
+
+        # broadened_wavelengths, broadened_fluxes = [],[]
+        # for i in range(len(unbroadened_fluxes)):
+        #     broadened_wavelength, broadened_flux = rotational_broadening(new_wavelength, unbroadened_fluxes[i], vrot[i])
+        #     broadened_wavelengths.append(broadened_wavelength)
+        #     broadened_fluxes.append(broadened_flux)
 
         return np.array(broadened_wavelength), np.array(broadened_fluxes)
 
