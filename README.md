@@ -62,9 +62,10 @@ We've prepared a jupyter notebook that shows the SpecFANN workflow, and what cus
 Change Log
 ---------------
 
-### 0.1.2 - fit plot bugfix/change to bundle location
+### 0.1.2 - added and optimized broadening functions
 
 * vectorized rotational broadening function
+* implemented macroturbulent and instrumental broadening
 
 ### 0.1.1 - fit plot bugfix/change to bundle location
 

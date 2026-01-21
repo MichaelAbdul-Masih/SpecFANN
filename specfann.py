@@ -7,9 +7,11 @@ import numpy as np
 import keras
 import emcee
 import matplotlib.pyplot as plt
+import math
 import scipy.interpolate as si
 from scipy.signal import fftconvolve
 from scipy.optimize import minimize
+from scipy.special import erf
 from scipy import stats
 import corner
 import dill as pickle
@@ -112,6 +114,74 @@ def rotational_broadening_vectorized(wave_spec,fluxes,vrots,epsilon=0.6):
     return wave_spec, broadened_fluxes
 
 
+def combined_broadening_vectorized(wavelength,fluxes,vrots,vmacros,inst_res=None,epsilon=0.6):
+    
+    c = 299792.458
+    # Ensure that vrots and vmacros have minimum values to avoid division by zero or other numerical issues
+    vrots[vrots < 1E-6]=1E-6
+    vmacros[vmacros < 1E-6]=1E-6
+
+    # convert wavelength array into velocity space, and ensure it is equidistant
+    wave_ = np.log(wavelength)
+    velo_ = np.linspace(wave_[0],wave_[-1],len(wave_))
+    dvelo = velo_[1]-velo_[0]
+    vrots_new = vrots/c
+    vmacros_new = vmacros/c
+
+    f = si.interp1d(wave_, fluxes, fill_value=np.array([1.0]), bounds_error=False)
+    fluxes_ = f(velo_)
+
+    #--------------- Instrumental broadening standard deviation ----------------
+    if inst_res is not None:
+        inst_fwhm = 1 / inst_res
+        inst_std = inst_fwhm / 2.3548
+    else:
+        inst_std = 0
+
+    # compute the velocity array of the kernels 
+    max_velocity = np.max(vrots_new) + np.max(vmacros_new) + np.max(inst_std)*5/2
+    n = 2*math.ceil(max_velocity/dvelo) + 1
+    kernel_velocity = np.linspace(-max_velocity, max_velocity, n)
+
+    #---------------Vrot KERNEL----------------
+    y = 1 - (kernel_velocity[None,:]/vrots_new[:,None])**2 # transformation of velocity
+    y[y<0]=0
+
+    rot_kernel = (2*(1-epsilon)*np.sqrt(y)+np.pi*epsilon/2.*y)/(np.pi*vrots_new[:,None]*(1-epsilon/3.0))
+    rot_kernel /= rot_kernel.sum(axis=1)[:,None]
+
+    #---------------Vmacro KERNEL----------------
+    x = (abs(kernel_velocity[None,:])/vmacros_new[:,None])
+
+    lambda0 = np.median(wave_)
+    mr = vmacros_new[:,None] * lambda0 / c
+    sq_pi = np.sqrt(np.pi)
+
+    macro_kernel = (2/(np.sqrt(np.pi) * mr)) * (np.exp(-x ** 2) + sq_pi * x * (erf(x) - 1.0))
+    macro_kernel /= macro_kernel.sum(axis=1)[:,None]
+    
+    combined_kernel = fftconvolve(rot_kernel, macro_kernel, mode='same', axes=1)
+    #---------------Instrumental KERNEL----------------
+    if inst_res is not None and np.ndim(inst_res) == 0:
+        inst_kernel = np.exp(-1 * (kernel_velocity)**2 / (2*inst_std**2))
+        inst_kernel /= inst_kernel.sum()
+        combined_kernel = fftconvolve(combined_kernel, inst_kernel[None,:], mode='same', axes=1)
+        
+    elif inst_res is not None and np.ndim(inst_res) == 1:
+        inst_kernels = np.exp(-1 * (kernel_velocity[None,:])**2 / (2*inst_std[:,None]**2))
+        inst_kernels /= inst_kernels.sum(axis=1)[:,None]
+        combined_kernel = fftconvolve(combined_kernel, inst_kernels, mode='same', axes=1)
+
+    #--------------- Convolved KERNEL----------------
+    flux_conv = fftconvolve(1-fluxes_,combined_kernel,mode='same', axes=1)
+
+
+    f = si.interp1d(np.exp(velo_), 1-flux_conv, fill_value=np.array([1.0]), bounds_error=False)
+    broadened_fluxes = f(wavelength)
+    return wavelength, broadened_fluxes
+
+
+
 def open_project(filename, bundle_path=None, bundle_name=None):
     """
     Open a project file and return the fwnnfit object.
@@ -205,7 +275,7 @@ class parameters(object):
     Class to hold the parameters for the model
     """
 
-    def __init__(self, teff = 40000, logg = 4.0, r = 7, he = 0.1, c = 7.5, n = 7.5, o = 7.5, si = 7.5, vrot = 0, gamma = 0):
+    def __init__(self, teff = 40000, logg = 4.0, r = 7, he = 0.1, c = 7.5, n = 7.5, o = 7.5, si = 7.5, vrot = 0, vmacro = 0, inst_res = 10000, gamma = 0):
         """
         Initialize the parameters object.
         Parameters:
@@ -218,7 +288,9 @@ class parameters(object):
         o (float): Oxygen abundance. (log(N_x/H_H)+12)
         si (float): Silicon abundance. (log(N_x/H_H)+12)
         vrot (float): Rotational velocity in km/s.
-        gamma (float): Radial velocity in km/s.
+        vmacro (float): Macroturbulent velocity in km/s.
+        inst_res (float): Instrumental resolving power (R = lambda/delta_lambda).
+        gamma (float): Systemic radial velocity in km/s.
         """
         
         self.teff = self.parameter('teff', teff, bounds=[15000, 60000])
@@ -230,6 +302,9 @@ class parameters(object):
         self.o = self.parameter('o', o, bounds=[6.0, 9.0])
         self.si = self.parameter('si', si, bounds=[6.0, 9.0])
         self.vrot = self.parameter('vrot', vrot, bounds=[0, 500])
+        self.vmacro = self.parameter('vmacro', vmacro, bounds=[0, 500])
+        self.inst_res = self.parameter('inst_res', inst_res, bounds=[1000, 100000])
+        self.inst_res.fix()  # Instrumental resolution is fixed by default
         self.gamma = self.parameter('gamma', gamma, bounds=[-500, 500])
         self.logf = self.parameter('logf', 0.0, bounds=[-10, 10])  # log of the variance scaling factor
     
@@ -495,13 +570,15 @@ class specfann(object):
         """
 
         vrot_ind = list(self.parameters.__dict__.keys()).index('vrot')
+        vmacro_ind = list(self.parameters.__dict__.keys()).index('vmacro')
+        inst_res_ind = list(self.parameters.__dict__.keys()).index('inst_res')
         gamma_ind = list(self.parameters.__dict__.keys()).index('gamma')
 
         if self.sbf.use_specfann_broadening:
             # Use the neural network to predict the fluxes for the line
             model_fluxes = self.sbf.predict_fluxes_from_nn(self.parameters, self.line_list, line, param_set)
             # Broaden the lines
-            broadened_wavelength, broadened_fluxes = self.broaden_lines(line, model_fluxes, param_set[:, vrot_ind])
+            broadened_wavelength, broadened_fluxes = self.broaden_lines(line, model_fluxes, param_set[:, vrot_ind], param_set[:, vmacro_ind], param_set[:, inst_res_ind])
         else:
             # Use the neural network to predict the fluxes for the line and apply broadening
             broadened_wavelength, broadened_fluxes = self.sbf.predict_fluxes_from_nn(self.parameters, self.line_list, line, param_set)
@@ -573,7 +650,7 @@ class specfann(object):
         return predicted_fluxes
     
 
-    def broaden_lines(self, line, fluxes, vrot):
+    def broaden_lines(self, line, fluxes, vrot, vmacro, inst_res):
         """
         Broaden the spectral lines using rotational broadening.
 
@@ -581,6 +658,8 @@ class specfann(object):
         line (str): The name of the line to be broadened.
         fluxes (array-like): The flux values corresponding to the line.
         vrot (float): The rotational velocity to apply for broadening.
+        vmacro (float): The macroturbulent velocity to apply for broadening.
+        inst_res (float): The instrumental resolution to apply for broadening.
 
         Returns:
         broadened_wavelength (array-like): The broadened wavelength array.
@@ -591,13 +670,8 @@ class specfann(object):
         new_wavelength = np.arange(wavelength[0], wavelength[-1], 0.01)
         unbroadened_fluxes = si.interp1d(wavelength, fluxes, bounds_error=False, fill_value=(1.0,1.0))(new_wavelength)
 
-        broadened_wavelength, broadened_fluxes = rotational_broadening_vectorized(new_wavelength, unbroadened_fluxes, vrot)
-
-        # broadened_wavelengths, broadened_fluxes = [],[]
-        # for i in range(len(unbroadened_fluxes)):
-        #     broadened_wavelength, broadened_flux = rotational_broadening(new_wavelength, unbroadened_fluxes[i], vrot[i])
-        #     broadened_wavelengths.append(broadened_wavelength)
-        #     broadened_fluxes.append(broadened_flux)
+        # broadened_wavelength, broadened_fluxes = rotational_broadening_vectorized(new_wavelength, unbroadened_fluxes, vrot)
+        broadened_wavelength, broadened_fluxes = combined_broadening_vectorized(new_wavelength, unbroadened_fluxes, vrot, vmacro, inst_res)
 
         return np.array(broadened_wavelength), np.array(broadened_fluxes)
 
@@ -904,17 +978,11 @@ class specfann(object):
         model_args = chains[inds]
         param_set = self.parse_parameter_set(model_args)
 
-        vrot_ind = list(self.parameters.__dict__.keys()).index('vrot')
-        gamma_ind = list(self.parameters.__dict__.keys()).index('gamma')
-
         subplots_dict = {1:[1, 1], 2:[1, 2], 3:[1,3], 4:[2, 2], 5:[2, 3], 6:[2,3], 7:[2,4], 8:[2,4], 9:[3,3], 10:[3, 4], 11:[3, 4], 12:[3, 4], 13:[3, 5], 14:[3, 5], 15:[3, 5], 16:[4,4], 17:[4,5], 18:[4,5], 19:[4,5], 20:[4,5], 21:[4,6], 22:[4,6], 23:[4,6], 24:[4,6], 25:[5,5], 26:[5,6], 27:[5,6], 28:[5,6], 29:[5,6], 30:[5,6], 31:[5,7], 32:[5,7], 33:[5,7], 34:[5,7], 35:[5,7], 36:[6,6], 37:[6,7], 38:[6,7], 39:[6,7], 40:[6,7], 41:[6,8], 42:[6,8], 43:[6,8], 44:[6,8], 45:[6,8]}
         fig, axs = plt.subplots(subplots_dict[len(self.line_list)][0], subplots_dict[len(self.line_list)][1], figsize=(subplots_dict[len(self.line_list)][1]*4, subplots_dict[len(self.line_list)][0]*4))
         axs = axs.ravel()
 
         for i, line in enumerate(self.line_list.keys()):
-            # model_fluxes = self.predict_fluxes_from_nn(line, np.array(param_set, ndmin=2))
-            # broadened_wavelength, broadened_fluxes = self.broaden_lines(line, model_fluxes, np.array(param_set[:, vrot_ind], ndmin=1))
-            # shifted_wavelengths = self.dopler_shift_lines(broadened_wavelength, np.array(param_set[:,gamma_ind], ndmin=1))
             model_wavelengths, model_fluxes = self.generate_model_per_line(line, np.array(param_set, ndmin=2))
 
             obs_inds = np.where((self.observed_wavelength >= self.line_list[line].fit_range[0]) & (self.observed_wavelength <= self.line_list[line].fit_range[1]))[0]
@@ -1001,17 +1069,11 @@ class specfann(object):
             model_args = self.nm_solution
         best_fit_params = self.parse_parameter_set(model_args)[0]
 
-        vrot_ind = list(self.parameters.__dict__.keys()).index('vrot')
-        gamma_ind = list(self.parameters.__dict__.keys()).index('gamma')
-
         subplots_dict = {1:[1, 1], 2:[1, 2], 3:[1,3], 4:[2, 2], 5:[2, 3], 6:[2,3], 7:[2,4], 8:[2,4], 9:[3,3], 10:[3, 4], 11:[3, 4], 12:[3, 4], 13:[3, 5], 14:[3, 5], 15:[3, 5], 16:[4,4], 17:[4,5], 18:[4,5], 19:[4,5], 20:[4,5], 21:[4,6], 22:[4,6], 23:[4,6], 24:[4,6], 25:[5,5], 26:[5,6], 27:[5,6], 28:[5,6], 29:[5,6], 30:[5,6], 31:[5,7], 32:[5,7], 33:[5,7], 34:[5,7], 35:[5,7], 36:[6,6], 37:[6,7], 38:[6,7], 39:[6,7], 40:[6,7], 41:[6,8], 42:[6,8], 43:[6,8], 44:[6,8], 45:[6,8]}
         fig, axs = plt.subplots(subplots_dict[len(self.line_list)][0], subplots_dict[len(self.line_list)][1], figsize=(subplots_dict[len(self.line_list)][1]*4, subplots_dict[len(self.line_list)][0]*4))
         axs = axs.ravel()
 
         for i, line in enumerate(self.line_list.keys()):
-            # model_fluxes = self.predict_fluxes_from_nn(line, np.array(best_fit_params, ndmin=2))
-            # broadened_wavelength, broadened_fluxes = self.broaden_lines(line, model_fluxes, np.array(best_fit_params[vrot_ind], ndmin=1))
-            # shifted_wavelengths = self.dopler_shift_lines(broadened_wavelength, np.array(best_fit_params[gamma_ind], ndmin=1))
             # Get the model wavelengths and fluxes
             model_wavelengths, model_fluxes = self.generate_model_per_line(line, np.array(best_fit_params, ndmin=2))
 
@@ -1294,18 +1356,11 @@ class specfann(object):
 
         param_set = self.parse_parameter_set(model_args)
 
-        vrot_ind = list(self.parameters.__dict__.keys()).index('vrot')
-        gamma_ind = list(self.parameters.__dict__.keys()).index('gamma')
-
-
         subplots_dict = {1:[1, 1], 2:[1, 2], 3:[1,3], 4:[2, 2], 5:[2, 3], 6:[2,3], 7:[2,4], 8:[2,4], 9:[3,3], 10:[3, 4], 11:[3, 4], 12:[3, 4], 13:[3, 5], 14:[3, 5], 15:[3, 5], 16:[4,4], 17:[4,5], 18:[4,5], 19:[4,5], 20:[4,5], 21:[4,6], 22:[4,6], 23:[4,6], 24:[4,6], 25:[5,5], 26:[5,6], 27:[5,6], 28:[5,6], 29:[5,6], 30:[5,6], 31:[5,7], 32:[5,7], 33:[5,7], 34:[5,7], 35:[5,7], 36:[6,6], 37:[6,7], 38:[6,7], 39:[6,7], 40:[6,7], 41:[6,8], 42:[6,8], 43:[6,8], 44:[6,8], 45:[6,8]}
         fig, axs = plt.subplots(subplots_dict[len(self.line_list)][0], subplots_dict[len(self.line_list)][1], figsize=(subplots_dict[len(self.line_list)][1]*4, subplots_dict[len(self.line_list)][0]*3))
         axs = axs.ravel()
 
         for i, line in enumerate(self.line_list.keys()):
-            # model_fluxes = self.predict_fluxes_from_nn(line, np.array(param_set, ndmin=2))
-            # broadened_wavelength, broadened_fluxes = self.broaden_lines(line, model_fluxes, np.array(param_set[:, vrot_ind], ndmin=1))
-            # shifted_wavelengths = self.dopler_shift_lines(broadened_wavelength, np.array(param_set[:,gamma_ind], ndmin=1))
             # Get the model wavelengths and fluxes
             model_wavelengths, model_fluxes = self.generate_model_per_line(line, np.array(param_set, ndmin=2))
 
