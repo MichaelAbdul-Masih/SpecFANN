@@ -303,26 +303,26 @@ class parameters(object):
         self.si = self.parameter('si', si, bounds=[6.0, 9.0])
         self.vrot = self.parameter('vrot', vrot, bounds=[0, 500])
         self.vmacro = self.parameter('vmacro', vmacro, bounds=[0, 500])
-        self.inst_res = self.parameter('inst_res', inst_res, bounds=[1000, 100000])
-        self.inst_res.fix()  # Instrumental resolution is fixed by default
+        self.inst_res = self.parameter('inst_res', inst_res, bounds=None, fixed=True)
         self.gamma = self.parameter('gamma', gamma, bounds=[-500, 500])
-        self.logf = self.parameter('logf', 0.0, bounds=[-10, 10])  # log of the variance scaling factor
+        self.logf = self.parameter('logf', 0.0, bounds=[-10, 10], fixed=True, hidden=True)  # log of the variance scaling factor
     
-    def summary(self):
+    def summary(self, show_hidden=False):
         """
         Print a summary of the parameters.
         """
         print("Parameters:")
         for param in self.__dict__.values():
             if isinstance(param, self.parameter):
-                print(f"{param.name}: {param.value} (fixed: {param.fixed}, bounds: {param.bounds})")
+                if not param._hidden or show_hidden:
+                    print(f"{param.name}: {param.value} (fixed: {param.fixed}, bounds: {param.bounds})")
 
     class parameter(object):
         """
         Class to hold individual parameters
         """
 
-        def __init__(self, name, value, bounds=None, fixed=False):
+        def __init__(self, name, value, bounds=None, fixed=False, hidden=False):
             """
             Initialize the parameter object.
             Parameters:
@@ -334,6 +334,7 @@ class parameters(object):
             self.value = value
             self.fixed = fixed
             self.bounds = bounds if bounds is not None else [None, None]
+            self._hidden = False
         
         def fix(self, value = None):
             """
@@ -915,6 +916,16 @@ class specfann(object):
                 initial_positions.append(np.random.uniform(bounds[0], bounds[1], n_walkers))
         
             initial_positions = np.array(initial_positions).T
+        elif isinstance(initial_positions, self.ga_result_summary):
+            ga_summary = initial_positions
+            initial_positions = []
+            for param in self.free_parameters:
+                if param in ga_summary.free_parameters:
+                    initial_positions.append(np.array(ga_summary.best_fit_model).T[ga_summary.free_parameters.index(param)])
+                else:
+                    initial_positions.append(self.parameters.__dict__[param].value)
+            initial_positions = initial_positions + 1e-4 * np.random.randn(n_walkers, len(self.free_parameters))
+
         else:
             initial_positions = initial_positions + 1e-4 * np.random.randn(n_walkers, len(self.free_parameters))
 
@@ -927,6 +938,31 @@ class specfann(object):
 
         if return_sampler:
             return sampler
+        
+    
+    def continue_mcmc(self, sampler=None, n_steps=None, return_sampler=False):
+        """
+        Continue the MCMC simulation from the last position of the walkers.
+
+        Parameters:
+        sampler (array-like): The MCMC sampler to continue.
+        n_steps (int): The number of steps to run the MCMC simulation for.
+        """
+
+        if not hasattr(self, 'emcee_sampler'):
+            raise ValueError("No MCMC sampler found. Run run_mcmc() first.")
+
+        if n_steps is None:
+            n_steps = self.n_steps
+
+        if sampler is None:
+            sampler = self.emcee_sampler
+        # Continue the MCMC simulation
+        sampler.run_mcmc(None, n_steps, progress=True)
+        self.emcee_sampler = sampler
+
+        if return_sampler:
+            return self.emcee_sampler
 
 
     def plot_MCMC_results(self, sampler = None, burnin=100, thin=1):
