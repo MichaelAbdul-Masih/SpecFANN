@@ -66,6 +66,7 @@ Change Log
 
 * vectorized rotational broadening function
 * implemented macroturbulent and instrumental broadening
+* added ability to specify wavelength region for S/N calculation when loading spectrum
 
 ### 0.1.1 - fit plot bugfix/change to bundle location
 

@@ -436,13 +436,15 @@ class specfann(object):
         return snr
 
 
-    def load_observed_data(self, observed_wavelength, observed_flux, observed_error=None):
+    def load_observed_data(self, observed_wavelength, observed_flux, observed_error=None, snr_region=[4220, 4240]):
         """
         Load the observed data into the class.
 
         Parameters:
         observed_wavelength (array-like): The observed wavelengths in Angstroms.
         observed_flux (array-like): The observed flux values corresponding to the wavelengths.
+        observed_error (array-like, optional): The errors in the observed flux values. If not provided, errors will be estimated based on the SNR of the data.
+        snr_region (list, optional): The wavelength region to use for SNR calculation. Default is [4220, 4240].
         """
 
         # check that the shapes of the observed wavelength and flux are the same
@@ -455,7 +457,7 @@ class specfann(object):
         self.observed_wavelength = observed_wavelength[inds]
         self.observed_flux = observed_flux[inds]
         if observed_error is None:
-            self.observed_error = np.ones(len(observed_flux)) * 1/self._calc_snr(observed_wavelength, observed_flux)
+            self.observed_error = np.ones(len(observed_flux)) * 1/self._calc_snr(observed_wavelength, observed_flux, region=snr_region)
         else:
             self.observed_error = observed_error[inds]
     
@@ -1062,6 +1064,8 @@ class specfann(object):
             # print(f"{param}: {mcmc[1]:.4f} ± {std:.4f}")
         print(f"Number of iterations: {sampler.get_chain().shape[0]}")
         print(f"Number of walkers: {sampler.get_chain().shape[1]}")
+
+        
     # -------------------Nelder-Mead functions--------------------
 
 
