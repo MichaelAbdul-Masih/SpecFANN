@@ -197,9 +197,15 @@ def open_project(filename, bundle_path=None, bundle_name=None):
 
     if bundle_path is None:
         if bundle_name is None:
-            bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/MW_v1.1/')
+            if os.path.exists(os.path.expanduser('~/.specfann/bundles/MW_v1.1/')):
+                bundle_path = os.path.expanduser('~/.specfann/bundles/MW_v1.1/')
+            else:
+                bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/MW_v1.1/')
         else:
-            bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/%s/' % bundle_name)
+            if os.path.exists(os.path.expanduser('~/.specfann/bundles/{}/'.format(bundle_name))):
+                bundle_path = os.path.expanduser('~/.specfann/bundles/{}/'.format(bundle_name))
+            else:
+                bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/%s/' % bundle_name)
     sys.path.append(bundle_path)
 
     with open(filename, 'rb') as inp:
@@ -715,7 +721,7 @@ class specfann(object):
         return np.array(interpolated_fluxes)
 
 
-    def parse_parameter_set(self, model_args):
+    def parse_parameter_set(self, model_args, free_parameters=None):
         """
         Parse the model arguments to return full parameter set including fixed params.
 
@@ -726,11 +732,14 @@ class specfann(object):
         parameter_set (array-like): Full parameter set.
         """
 
+        if free_parameters is None:
+            free_parameters = self.free_parameters
+            
         params = list(self.parameters.__dict__.keys())
         parameter_set = []
         for param in params:
-            if param in self.free_parameters:
-                parameter_set.append(np.array(model_args.T[self.free_parameters.index(param)], ndmin=1))
+            if param in free_parameters:
+                parameter_set.append(np.array(model_args.T[free_parameters.index(param)], ndmin=1))
             else:
                 parameter_set.append([self.parameters.__dict__[param].value]*len(np.array(model_args, ndmin=2)))
 
@@ -912,12 +921,19 @@ class specfann(object):
 
         # Initialize the walkers if not passed to the function
         if initial_positions is None:
-            initial_positions = []
+            random_positions = []
             for param in self.free_parameters:
                 bounds = self.parameters.__dict__[param].bounds
-                initial_positions.append(np.random.uniform(bounds[0], bounds[1], n_walkers))
+                random_positions.append(np.random.uniform(bounds[0], bounds[1], n_walkers*10))
         
-            initial_positions = np.array(initial_positions).T
+            random_positions = np.array(random_positions).T
+            param_set = self.parse_parameter_set(random_positions, free_parameters=self.mcmc_free_parameters)
+            log_prior = self.log_prior(param_set)
+            good_inds = np.where(np.isfinite(log_prior))[0]
+            if len(good_inds) < n_walkers:
+                raise ValueError("Not enough good initial positions found. Check the parameter bounds to make sure they are compatible with the priors.")
+            initial_positions = random_positions[good_inds][:n_walkers]
+
         elif isinstance(initial_positions, self.ga_result_summary):
             ga_summary = initial_positions
             initial_positions = []
@@ -967,7 +983,7 @@ class specfann(object):
             return self.emcee_sampler
 
 
-    def plot_MCMC_results(self, sampler = None, burnin=100, thin=1):
+    def plot_MCMC_results(self, sampler = None, burnin=100, thin=1, save_path=None):
         """
         Plot the results of the MCMC simulation.
 
@@ -988,12 +1004,19 @@ class specfann(object):
             axs[i].set_xlim(0, len(samples))
             axs[i].set_ylabel(param)
         
-        plt.show()
+        if save_path is not None:
+            plt.savefig(save_path.split('.')[0] + '_trace.png')
+        else:
+            plt.show()
 
         flat_samples = sampler.get_chain(discard=burnin, flat=True, thin=thin)
 
         fig = corner.corner(flat_samples, labels=self.mcmc_free_parameters, show_titles=True)        
-        plt.show()
+        
+        if save_path is not None:
+            plt.savefig(save_path)
+        else:
+            plt.show()
     
 
     def plot_MCMC_fit(self, sampler = None, burnin=100, save_path=None):
@@ -1011,13 +1034,15 @@ class specfann(object):
             sampler = self.emcee_sampler
 
         chains = sampler.get_chain(flat=True, thin=1, discard=burnin)
+        log_probs = sampler.get_log_prob(flat=True, thin=1, discard=burnin)
 
         inds = np.random.randint(len(chains), size=1000)
-        model_args = chains[inds]
-        param_set = self.parse_parameter_set(model_args)
+        inds_check = inds[np.isfinite(log_probs[inds])]
+        model_args = chains[inds_check]
+        param_set = self.parse_parameter_set(model_args, free_parameters=self.mcmc_free_parameters)
 
         subplots_dict = {1:[1, 1], 2:[1, 2], 3:[1,3], 4:[2, 2], 5:[2, 3], 6:[2,3], 7:[2,4], 8:[2,4], 9:[3,3], 10:[3, 4], 11:[3, 4], 12:[3, 4], 13:[3, 5], 14:[3, 5], 15:[3, 5], 16:[4,4], 17:[4,5], 18:[4,5], 19:[4,5], 20:[4,5], 21:[4,6], 22:[4,6], 23:[4,6], 24:[4,6], 25:[5,5], 26:[5,6], 27:[5,6], 28:[5,6], 29:[5,6], 30:[5,6], 31:[5,7], 32:[5,7], 33:[5,7], 34:[5,7], 35:[5,7], 36:[6,6], 37:[6,7], 38:[6,7], 39:[6,7], 40:[6,7], 41:[6,8], 42:[6,8], 43:[6,8], 44:[6,8], 45:[6,8]}
-        fig, axs = plt.subplots(subplots_dict[len(self.line_list)][0], subplots_dict[len(self.line_list)][1], figsize=(subplots_dict[len(self.line_list)][1]*4, subplots_dict[len(self.line_list)][0]*4))
+        fig, axs = plt.subplots(subplots_dict[len(self.line_list)][0], subplots_dict[len(self.line_list)][1], figsize=(subplots_dict[len(self.line_list)][1]*4, subplots_dict[len(self.line_list)][0]*3))
         axs = axs.ravel()
 
         for i, line in enumerate(self.line_list.keys()):
@@ -1037,10 +1062,23 @@ class specfann(object):
             axs[i].set_xlabel('Wavelength (Angstrom)')
             axs[i].set_ylabel('Flux')
 
-        plt.show()
+        if i < len(axs) - 1:
+            for j in range(i+1, len(axs)):
+                axs[j].axis('off')
+
+        if self.object_name is not None:
+            plt.suptitle(f'{self.object_name} MCMC fit', fontsize=16)
+
+        plt.tight_layout()
+        
+        if save_path is not None:
+            plt.savefig(save_path)
+        else:
+            plt.show()
+
 
     
-    def print_MCMC_results(self, sampler=None, burnin=100):
+    def print_MCMC_results(self, sampler=None, burnin=100, sigma=1, filename=None):
         """
         Print the results of the MCMC simulation.
 
@@ -1058,12 +1096,23 @@ class specfann(object):
 
         print("MCMC Results:")
         for i, param in enumerate(self.mcmc_free_parameters):
-            mcmc = np.percentile(chains[:, i], [16, 50, 84])
+            if sigma == 1:
+                mcmc = np.percentile(chains[:, i], [16, 50, 84])
+            elif sigma == 2:
+                mcmc = np.percentile(chains[:, i], [2.5, 50, 97.5])
+            else:
+                raise ValueError("Sigma must be either 1 or 2.")
             errors = np.diff(mcmc)
             print(f"{param} = ".rjust(15) + f" {mcmc[1]}  ( +{errors[1]:.5f}; -{errors[0]:.5f})")
             # print(f"{param}: {mcmc[1]:.4f} ± {std:.4f}")
         print(f"Number of iterations: {sampler.get_chain().shape[0]}")
         print(f"Number of walkers: {sampler.get_chain().shape[1]}")
+
+        if filename is not None:
+            with open(filename, 'w') as f:
+                for i, param in enumerate(self.mcmc_free_parameters):
+                    f.write(f"{param} {mcmc[1]} {mcmc[0]} {mcmc[2]}\n")
+
 
         
     # -------------------Nelder-Mead functions--------------------
@@ -1149,17 +1198,21 @@ class specfann(object):
 
             best_mod = []
             error_ranges = []
+            error_ranges_1sigma = []
             probs = self.probabilities.flatten()
             inds = np.where(probs > 0.05)[0]
+            inds_1sigma = np.where(probs > 0.32)[0]
             self.free_parameters = free_parameters
             for i, param in enumerate(free_parameters):
                 best_mod.append(best_model[param])
                 param_values = self.populations[:, :, i].flatten()
-                param_values = param_values[inds]
-                error_ranges.append([np.min(param_values), np.max(param_values)])
-
+                param_values_2sigma = param_values[inds]
+                error_ranges.append([np.min(param_values_2sigma), np.max(param_values_2sigma)])
+                param_values_1sigma = param_values[inds_1sigma]
+                error_ranges_1sigma.append([np.min(param_values_1sigma), np.max(param_values_1sigma)])
             self.best_fit_model = best_mod
-            self.best_fit_errors = error_ranges
+            self.best_fit_errors_2sigma = error_ranges
+            self.best_fit_errors_1sigma = error_ranges_1sigma
 
 
             self.best_fitness = best_fitness
@@ -1307,13 +1360,14 @@ class specfann(object):
 
         return probabilities
 
-    def plot_GA_results(self, ga_results=None, diagnostic = 'fitness', save_path=None):
+    def plot_GA_results(self, ga_results=None, diagnostic = 'fitness', sigma=2, save_path=None):
         """
         Plot the results of the genetic algorithm.
 
         Parameters:
         ga_results (ga_result_summary): The results of the genetic algorithm.
         diagnostic (str): The diagnostic to plot. Options are 'fitness', 'probability', or 'chi_square'.
+        sigma (int): The number of sigma to use for error bars.
         save_path (str): Path to save the plot. If None, the plot will not be saved.
         """
 
@@ -1339,6 +1393,12 @@ class specfann(object):
             diagnostic_param = 'reduced_chi_squares'
             title = 'Reduced Chi-Square'
 
+        if sigma == 1:
+            best_fit_errors = ga_results.best_fit_errors_1sigma
+        elif sigma == 2:
+            best_fit_errors = ga_results.best_fit_errors_2sigma
+        else:
+            raise ValueError("Invalid sigma value. Choose 1 or 2.")
 
         diagnostic_values = np.array(ga_results.__dict__[diagnostic_param]).flatten()
         for i, param in enumerate(ga_results.free_parameters):
@@ -1351,8 +1411,8 @@ class specfann(object):
             axs[i].set_ylabel(title)
             axs[i].set_xlim(ga_results.ga_params[param].min, ga_results.ga_params[param].max)
             axs[i].set_ylim(0, np.max(diagnostic_values)*1.1)
-            axs[i].set_title(r'%s = $%0.2f \pm \genfrac{}{}{0}{}{%0.2f}{%0.2f}$'%(param, ga_results.best_fit_model[i], ga_results.best_fit_errors[i][1] - ga_results.best_fit_model[i], ga_results.best_fit_model[i] - ga_results.best_fit_errors[i][0]))
-            axs[i].fill_betweenx([0, np.max(diagnostic_values)*1.1], ga_results.best_fit_errors[i][0], ga_results.best_fit_errors[i][1], color='lightcoral', alpha=0.3)
+            axs[i].set_title(r'%s = $%0.2f \pm \genfrac{}{}{0}{}{%0.2f}{%0.2f}$'%(param, ga_results.best_fit_model[i], best_fit_errors[i][1] - ga_results.best_fit_model[i], ga_results.best_fit_model[i] - best_fit_errors[i][0]))
+            axs[i].fill_betweenx([0, np.max(diagnostic_values)*1.1], best_fit_errors[i][0], best_fit_errors[i][1], color='lightcoral', alpha=0.3)
         
         if i < len(axs) - 1:
             for j in range(i+1, len(axs)):
@@ -1369,12 +1429,13 @@ class specfann(object):
             plt.show()
 
 
-    def plot_GA_fit(self, ga_results=None, save_path=None):
+    def plot_GA_fit(self, ga_results=None, sigma=2, save_path=None):
         """
         Plot the best-fit model from the genetic algorithm against the observed data.
 
         Parameters:
         ga_results (ga_result_summary): The results of the genetic algorithm.
+        sigma (int): The number of sigma to use for error bars.
         save_path (str): Path to save the plot. If None, the plot will not be saved.
         """
 
@@ -1389,12 +1450,15 @@ class specfann(object):
         population_parameters = pop.reshape(-1, pop.shape[-1])
 
         probabilities = np.array(ga_results.probabilities).flatten()
-        inds = np.where(probabilities > 0.05)[0]
+        if sigma == 1:
+            inds = np.where(probabilities > 0.32)[0]
+        elif sigma == 2:
+            inds = np.where(probabilities > 0.05)[0]
 
         model_args = population_parameters[inds]
         np.append(model_args, best_fit_params)
 
-        param_set = self.parse_parameter_set(model_args)
+        param_set = self.parse_parameter_set(model_args, free_parameters=ga_results.free_parameters)
 
         subplots_dict = {1:[1, 1], 2:[1, 2], 3:[1,3], 4:[2, 2], 5:[2, 3], 6:[2,3], 7:[2,4], 8:[2,4], 9:[3,3], 10:[3, 4], 11:[3, 4], 12:[3, 4], 13:[3, 5], 14:[3, 5], 15:[3, 5], 16:[4,4], 17:[4,5], 18:[4,5], 19:[4,5], 20:[4,5], 21:[4,6], 22:[4,6], 23:[4,6], 24:[4,6], 25:[5,5], 26:[5,6], 27:[5,6], 28:[5,6], 29:[5,6], 30:[5,6], 31:[5,7], 32:[5,7], 33:[5,7], 34:[5,7], 35:[5,7], 36:[6,6], 37:[6,7], 38:[6,7], 39:[6,7], 40:[6,7], 41:[6,8], 42:[6,8], 43:[6,8], 44:[6,8], 45:[6,8]}
         fig, axs = plt.subplots(subplots_dict[len(self.line_list)][0], subplots_dict[len(self.line_list)][1], figsize=(subplots_dict[len(self.line_list)][1]*4, subplots_dict[len(self.line_list)][0]*3))
@@ -1429,12 +1493,14 @@ class specfann(object):
             plt.show()
 
     
-    def print_GA_results(self, ga_results=None, filename=None):
+    def print_GA_results(self, ga_results=None, sigma=2, filename=None):
         """
         Print the results of the genetic algorithm.
 
         Parameters:
         ga_results (ga_result_summary): The results of the genetic algorithm. If None, uses the results from the last run.
+        sigma (int): The number of sigma to use for error bars.
+        filename (str): The name of the file to save the results to. If None, results are not saved.
         """
 
         if ga_results is None:
@@ -1442,9 +1508,16 @@ class specfann(object):
                 raise ValueError("No GA results found. Run run_GA() first.")
             ga_results = self.GA_results
 
-        print(f"GA Results Summary:")
+        if sigma == 1:
+            best_fit_errors = ga_results.best_fit_errors_1sigma
+        elif sigma == 2:
+            best_fit_errors = ga_results.best_fit_errors_2sigma
+        else:
+            raise ValueError("Invalid sigma value. Choose 1 or 2.")
+
+        print(f"GA Results Summary ({sigma}-sigma):")
         for i, param in enumerate(self.free_parameters):
-            print(f"{param} = ".rjust(15) + f" {ga_results.best_fit_model[i]}  ( +{ga_results.best_fit_errors[i][1] - ga_results.best_fit_model[i]:.3f}; -{ga_results.best_fit_model[i] - ga_results.best_fit_errors[i][0]:.3f})")
+            print(f"{param} = ".rjust(15) + f" {ga_results.best_fit_model[i]}  ( +{best_fit_errors[i][1] - ga_results.best_fit_model[i]:.3f}; -{ga_results.best_fit_model[i] - best_fit_errors[i][0]:.3f})")
         # print(f"Best fit parameters: {self.GA_results.best_fit_model}")
         # print(f"Best fit errors: {self.GA_results.best_fit_errors}")
         print(f"Best fitness: {self.GA_results.best_fitness}")
@@ -1454,4 +1527,4 @@ class specfann(object):
         if filename is not None:
             with open(filename, 'w') as f:
                 for i, param in enumerate(self.free_parameters):
-                    f.write(f"{param} {ga_results.best_fit_model[i]} {ga_results.best_fit_errors[i][0]} {ga_results.best_fit_errors[i][1]}\n")
+                    f.write(f"{param} {ga_results.best_fit_model[i]} {best_fit_errors[i][0]} {best_fit_errors[i][1]}\n")
