@@ -1111,6 +1111,10 @@ class specfann(object):
         if filename is not None:
             with open(filename, 'w') as f:
                 for i, param in enumerate(self.mcmc_free_parameters):
+                    if sigma == 1:
+                        mcmc = np.percentile(chains[:, i], [16, 50, 84])
+                    elif sigma == 2:
+                        mcmc = np.percentile(chains[:, i], [2.5, 50, 97.5])
                     f.write(f"{param} {mcmc[1]} {mcmc[0]} {mcmc[2]}\n")
 
 
