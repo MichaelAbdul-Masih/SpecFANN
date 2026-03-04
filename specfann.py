@@ -231,6 +231,28 @@ def import_from_path(module_name, file_path):
     return module
 
 
+def list_available_bundles():
+    '''
+    Lists the available bundles in the cloud.
+
+    Returns:
+        list: A list of available bundle names.
+    '''
+    # import requests
+    # from bs4 import BeautifulSoup
+
+    # url = "https://cloud.iac.es/public.php/webdav/"
+    # response = requests.get(url, auth=('H7FdjCcJcaZJSzN', ''))
+    
+    # if response.status_code == 200:
+    #     soup = BeautifulSoup(response.content, 'html.parser')
+    #     bundles = [a.text for a in soup.find_all('a') if a.text.endswith('.tgz')]
+    #     return bundles
+    # else:
+    #     raise OSError("Failed to retrieve bundle list from the cloud. Status code: {}".format(response.status_code))
+    return ['MW_v1.0', 'MW_v1.1', 'MW_v1.2', 'SMC_v1.0']
+
+
 def install_bundle(bundle_name, bundle_path = None):
     '''
     Downloads and unpacks bundles from the cloud.
