@@ -952,10 +952,7 @@ class specfann(object):
             random_positions = []
             for param in self.free_parameters:
                 bounds = self.parameters.__dict__[param].bounds
-                initial_positions.append(np.random.uniform(bounds[0], bounds[1], n_walkers))
-
-            initial_positions = np.array(initial_positions).T
-            random_positions.append(np.random.uniform(bounds[0], bounds[1], n_walkers*10))
+                random_positions.append(np.random.uniform(bounds[0], bounds[1], n_walkers*10))
 
             random_positions = np.array(random_positions).T
             param_set = self.parse_parameter_set(random_positions, free_parameters=self.mcmc_free_parameters)
@@ -1132,16 +1129,6 @@ class specfann(object):
             # print(f"{param}: {mcmc[1]:.4f} ± {std:.4f}")
         print(f"Number of iterations: {sampler.get_chain().shape[0]}")
         print(f"Number of walkers: {sampler.get_chain().shape[1]}")
-
-        if filename is not None:
-            with open(filename, 'w') as f:
-                for i, param in enumerate(self.mcmc_free_parameters):
-                    if sigma == 1:
-                        mcmc = np.percentile(chains[:, i], [16, 50, 84])
-                    elif sigma == 2:
-                        mcmc = np.percentile(chains[:, i], [2.5, 50, 97.5])
-                    f.write(f"{param} {mcmc[1]} {mcmc[0]} {mcmc[2]}\n")
-
 
         if filename is not None:
             with open(filename, 'w') as f:
@@ -1643,9 +1630,6 @@ class specfann(object):
             axs[i].set_ylabel(title)
             axs[i].set_xlim(ga_results.ga_params[param].min, ga_results.ga_params[param].max)
             axs[i].set_ylim(0, np.max(diagnostic_values)*1.1)
-            axs[i].set_title(r'%s = $%0.2f \pm \genfrac{}{}{0}{}{%0.2f}{%0.2f}$'%(param, ga_results.best_fit_model[i], ga_results.best_fit_errors[i][1] - ga_results.best_fit_model[i], ga_results.best_fit_model[i] - ga_results.best_fit_errors[i][0]))
-            axs[i].fill_betweenx([0, np.max(diagnostic_values)*1.1], ga_results.best_fit_errors[i][0], ga_results.best_fit_errors[i][1], color='lightcoral', alpha=0.3)
-
             axs[i].set_title(r'%s = $%0.2f \pm \genfrac{}{}{0}{}{%0.2f}{%0.2f}$'%(param, ga_results.best_fit_model[i], best_fit_errors[i][1] - ga_results.best_fit_model[i], ga_results.best_fit_model[i] - best_fit_errors[i][0]))
             axs[i].fill_betweenx([0, np.max(diagnostic_values)*1.1], best_fit_errors[i][0], best_fit_errors[i][1], color='lightcoral', alpha=0.3)
 
