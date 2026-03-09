@@ -1074,7 +1074,7 @@ class specfann(object):
 
     # -------------------Nested sampling (ultranest) functions--------------------
 
-    def run_nested_sampling(self, jitter=False, return_result=False, step_sampler=None, log_dir='nested_sampling_results', **kwargs):
+    def run_nested_sampling(self, jitter=False, return_result=False, step_sampler=None, log_dir=None, **kwargs):
         """
         Run nested sampling with ultranest to sample the parameter space.
 
@@ -1084,8 +1084,8 @@ class specfann(object):
         step_sampler: If None, use default exploration. If True or 'slice', use PopulationSimpleSliceSampler
             (popsize=5, nsteps=20, generate_mixture_random_direction). kwargs step_sampler_popsize and
             step_sampler_nsteps override these. Otherwise must be an ultranest step sampler instance to attach.
-        log_dir: If str, save results to a timestamped subfolder (e.g. log_dir/ns_YYYYMMDD_HHMMSS/).
-            If None, do not save to disk.
+        log_dir: Optional path to a folder in which to save results (timestamped subfolder log_dir/ns_YYYYMMDD_HHMMSS/).
+            If None (default), results are not saved to disk.
         **kwargs: Passed to ultranest.ReactiveNestedSampler.run() (e.g. min_num_live_points, dlogz,
             max_num_improvement_loops). step_sampler_popsize and step_sampler_nsteps are consumed when
             step_sampler is True/'slice'.
@@ -1113,11 +1113,11 @@ class specfann(object):
             cube = np.array(cube, ndmin=2)
             return np.array([bounds[i][0] + cube[:, i] * (bounds[i][1] - bounds[i][0]) for i in range(ndim)]).T
 
-        def log_likelihood(theta):
-            """Log likelihood. Vectorized: theta (n, ndim) -> (n,) log likelihoods."""
+        def log_probability(theta):
+            """Log probability (log prior + log likelihood). Same as MCMC. Non-finite replaced with -1e100 for ultranest."""
             theta = np.array(theta, ndmin=2)
-            param_set = self.parse_parameter_set(theta)
-            return self.log_likelihood(param_set, jitter=jitter)
+            logp = self.log_probability(theta, jitter=jitter)
+            return np.where(np.isfinite(logp), logp, -1e100)
 
         ns_log_dir = None
         if log_dir is not None:
@@ -1126,7 +1126,7 @@ class specfann(object):
             os.makedirs(ns_log_dir, exist_ok=True)
 
         sampler = ultranest.ReactiveNestedSampler(
-            param_names, log_likelihood, prior_transform, vectorized=True,
+            param_names, log_probability, prior_transform, vectorized=True,
             log_dir=ns_log_dir, resume='overwrite'
         )
 
@@ -1178,6 +1178,28 @@ class specfann(object):
         n_resample = min(10000, len(samples))
         indices = np.random.choice(len(samples), size=n_resample, p=weights, replace=True)
         return samples[indices][::thin]
+
+    def plot_nested_sampling_results(self, result=None):
+        """
+        Plot the results of the nested sampling run: ultranest's run and trace plots (from the
+        sampler), then a corner plot of the posterior.
+
+        Parameters:
+        result: Ultranest result object. If None, uses self.ultranest_result.
+        """
+        if result is None:
+            if not hasattr(self, 'ultranest_result'):
+                raise ValueError("No nested sampling result found. Run run_nested_sampling() first.")
+            result = self.ultranest_result
+
+        if hasattr(self, 'ultranest_sampler') and self.ultranest_sampler is not None:
+            self.ultranest_sampler.plot_run()
+            self.ultranest_sampler.plot_trace()
+
+        flat_samples = self._get_nested_sampling_posterior_samples(result=result, thin=1)
+        params = self.nested_sampling_free_parameters
+        fig = corner.corner(flat_samples, labels=params, show_titles=True)
+        plt.show()
 
     def plot_nested_sampling_fit(self, result=None, n_draw=1000, save_path=None):
         """
