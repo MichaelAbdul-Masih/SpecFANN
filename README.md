@@ -1,4 +1,4 @@
-# SpecFANN 0.1.2
+# SpecFANN 0.2.0
 
 Introduction
 ------------
@@ -63,11 +63,13 @@ We've prepared a jupyter notebook that shows the SpecFANN workflow, and what cus
 Change Log
 ---------------
 
-### 0.1.2 - added and optimized broadening functions
+### 0.2.0 - Nested sampling introduced; added and optimized broadening functions
 
+* implemented Nested Sampling
 * vectorized rotational broadening function
 * implemented macroturbulent and instrumental broadening
 * added ability to specify wavelength region for S/N calculation when loading spectrum
+* added ability to specity 1-sigma or 2-sigma for GA fit plots and outputs
 
 ### 0.1.1 - fit plot bugfix/change to bundle location
 

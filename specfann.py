@@ -1,4 +1,4 @@
-__version__ = '0.1.2'
+__version__ = '0.2.0'
 
 
 import os
@@ -300,6 +300,8 @@ def install_bundle(bundle_name, bundle_path = None):
     # clean up
     os.remove(local_bundle_name)
 
+    print('Bundle {} installed successfully at {}!'.format(bundle_name, bundle_path))
+
 
 class parameters(object):
     """
@@ -324,19 +326,19 @@ class parameters(object):
         gamma (float): Systemic radial velocity in km/s.
         """
 
-        self.teff = self.parameter('teff', teff, bounds=[15000, 60000])
-        self.logg = self.parameter('logg', logg, bounds=[2.0, 4.5])
-        self.r = self.parameter('r', r, bounds=[5, 30])
-        self.he = self.parameter('he', he, bounds=[0.06, 0.3])
-        self.c = self.parameter('c', c, bounds=[6.0, 9.0])
-        self.n = self.parameter('n', n, bounds=[6.0, 9.0])
-        self.o = self.parameter('o', o, bounds=[6.0, 9.0])
-        self.si = self.parameter('si', si, bounds=[6.0, 9.0])
-        self.vrot = self.parameter('vrot', vrot, bounds=[0, 500])
-        self.vmacro = self.parameter('vmacro', vmacro, bounds=[0, 500])
-        self.inst_res = self.parameter('inst_res', inst_res, bounds=None, fixed=True)
-        self.gamma = self.parameter('gamma', gamma, bounds=[-500, 500])
-        self.logf = self.parameter('logf', 0.0, bounds=[-10, 10], fixed=True, hidden=True)  # log of the variance scaling factor
+        self.teff = self.parameter('teff', teff, bounds=[15000, 60000], latex_string=r'$T_{eff}$', unit=r'K')
+        self.logg = self.parameter('logg', logg, bounds=[2.0, 4.5], latex_string=r'$\log g$')
+        self.r = self.parameter('r', r, bounds=[5, 30], latex_string=r'$R$', unit=r'R$_\odot$')
+        self.he = self.parameter('he', he, bounds=[0.06, 0.3], latex_string=r'$Y_\mathrm{He}$')
+        self.c = self.parameter('c', c, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{C}$')
+        self.n = self.parameter('n', n, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{N}$')
+        self.o = self.parameter('o', o, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{O}$')
+        self.si = self.parameter('si', si, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{Si}$')
+        self.vrot = self.parameter('vrot', vrot, bounds=[0, 500], latex_string=r'$v \sin i$', unit=r'km s$^{-1}$')
+        self.vmacro = self.parameter('vmacro', vmacro, bounds=[0, 500], latex_string=r'$v_\mathrm{macro}$', unit=r'km s$^{-1}$')
+        self.inst_res = self.parameter('inst_res', inst_res, bounds=None, fixed=True, latex_string=r'$\mathcal{R}$')
+        self.gamma = self.parameter('gamma', gamma, bounds=[-500, 500], latex_string=r'$\gamma$', unit=r'km s$^{-1}$')
+        self.logf = self.parameter('logf', 0.0, bounds=[-10, 10], fixed=True, hidden=True, latex_string=r'$\log f$')  # log of the variance scaling factor
 
     def summary(self, show_hidden=False):
         """
@@ -353,19 +355,24 @@ class parameters(object):
         Class to hold individual parameters
         """
 
-        def __init__(self, name, value, bounds=None, fixed=False, hidden=False):
+        def __init__(self, name, value, bounds=None, fixed=False, latex_string=None, unit=None, hidden=False):
             """
             Initialize the parameter object.
             Parameters:
             name (str): The name of the parameter.
             value (float): The value of the parameter.
             bounds (list): A list containing the lower and upper bounds for the parameter.
+            latex_string (str): The LaTeX string for the parameter.
+            unit (str): The unit of the parameter.
+            hidden (bool): Whether the parameter is hidden.
             """
             self.name = name
             self.value = value
             self.fixed = fixed
             self.bounds = bounds if bounds is not None else [None, None]
-            self._hidden = False
+            self.latex_string = latex_string
+            self.unit = unit
+            self._hidden = hidden
 
         def fix(self, value = None):
             """
@@ -399,12 +406,13 @@ class line_to_fit(object):
     Class to hold information about the lines to be fitted
     """
 
-    def __init__(self, line, nn_path='bundles/', nn_model_string = 'fluxes_$LINE$_model.keras', nn_wavelength_string = 'wnew_$LINE$.npy', fit_range=None):
+    def __init__(self, line, nn_path='bundles/', nn_model_string = 'fluxes_$LINE$_model.keras', nn_wavelength_string = 'wnew_$LINE$.npy', fit_range=None, components_dict=None):
         """
         Initialize the line_to_fit object.
         Parameters:
         line (str): The name of the line to be fitted.
         fit_range (list): The range of wavelengths to be fitted.
+        components_dict (dict): The individual transitions that make up the line (keys are species, values are lists of wavelengths).
         """
 
         self.line_name = line
@@ -419,6 +427,8 @@ class line_to_fit(object):
             self.fit_range = [np.min(self.wavelength) + total_range/4, np.max(self.wavelength) - total_range/4]
         else:
             self.fit_range = fit_range
+
+        self.components_dict = components_dict
 
 
 class specfann(object):
@@ -436,10 +446,10 @@ class specfann(object):
 
         if bundle_path is None:
             if bundle_name is None:
-                if os.path.exists(os.path.expanduser('~/.specfann/bundles/MW_v1.1/')):
-                    bundle_path = os.path.expanduser('~/.specfann/bundles/MW_v1.1/')
+                if os.path.exists(os.path.expanduser('~/.specfann/bundles/MW_v1.2/')):
+                    bundle_path = os.path.expanduser('~/.specfann/bundles/MW_v1.2/')
                 else:
-                    bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/MW_v1.1/')
+                    bundle_path = os.path.join(os.path.dirname(__file__), 'bundles/MW_v1.2/')
             else:
                 if os.path.exists(os.path.expanduser('~/.specfann/bundles/{}/'.format(bundle_name))):
                     bundle_path = os.path.expanduser('~/.specfann/bundles/{}/'.format(bundle_name))
@@ -775,12 +785,21 @@ class specfann(object):
     # -------------------Cost functions--------------------
 
 
-    def calc_log_likelihoods(self, data, error, model):
+    def calc_log_likelihoods_with_fuzz(self, data, error, model):
         data = np.array(data)
         error = np.array(error)
         model = np.array(model)
 
         log_liklihoods = np.sum(-0.5 * ((data - model)**2 / error**2 + np.log(2*np.pi * error**2)), axis=-1)
+        return log_liklihoods
+    
+
+    def calc_log_likelihoods(self, data, error, model):
+        data = np.array(data)
+        error = np.array(error)
+        model = np.array(model)
+
+        log_liklihoods = np.sum(-0.5 * ((data - model)**2 / error**2), axis=-1)
         return log_liklihoods
 
 
@@ -793,7 +812,7 @@ class specfann(object):
         return chi_squares
 
 
-    def log_likelihood(self, param_set, jitter=False):
+    def log_likelihood(self, param_set, fuzz=False):
         """
         Calculate the log likelihood of the model given the observed data.
 
@@ -818,11 +837,11 @@ class specfann(object):
             interpolated_fluxes = self.interp_model_lines_to_observed(obs_wavelength, model_wavelengths, model_fluxes)
 
             # Calculate the log likelihood
-            if jitter:
+            if fuzz:
                 logf_ind = list(self.parameters.__dict__.keys()).index('logf')
                 logf = param_set[:, logf_ind]
                 error = np.sqrt(self.observed_error[obs_inds] **2 + np.array(10**logf, ndmin=2).T * interpolated_fluxes**2)
-                log_likelihoods += self.calc_log_likelihoods(self.observed_flux[obs_inds], error, interpolated_fluxes)
+                log_likelihoods += self.calc_log_likelihoods_with_fuzz(self.observed_flux[obs_inds], error, interpolated_fluxes)
             else:
                 log_likelihoods += self.calc_log_likelihoods(self.observed_flux[obs_inds], self.observed_error[obs_inds], interpolated_fluxes)
 
@@ -869,22 +888,22 @@ class specfann(object):
         return prior_array
 
 
-    def log_probability(self, model_args, jitter=False):
+    def log_probability(self, model_args, fuzz=False):
 
         param_set = self.parse_parameter_set(model_args)
 
         lp = self.log_prior(param_set)
 
-        return lp + self.log_likelihood(param_set, jitter=jitter)
+        return lp + self.log_likelihood(param_set, fuzz=fuzz)
 
 
-    def reduced_chi_square(self, model_args, jitter=False):
+    def reduced_chi_square(self, model_args, fuzz=False):
         """
         Calculate the reduced chi-squared statistic for the model parameters.
 
         Parameters:
         model_args (array-like): The full parameter set including free and fixed parameters.
-        jitter (bool): Whether to include jitter in the likelihood calculation.
+        fuzz (bool): Whether to include fuzz in the likelihood calculation.
 
         Returns:
         chi_squared (float): The chi-squared statistic.
@@ -906,7 +925,7 @@ class specfann(object):
             interpolated_fluxes = self.interp_model_lines_to_observed(obs_wavelength, model_wavelengths, model_fluxes)
 
             # Calculate the log likelihood
-            if jitter:
+            if fuzz:
                 logf_ind = list(self.parameters.__dict__.keys()).index('logf')
                 logf = param_set[:, logf_ind]
                 error = np.sqrt(self.observed_error[obs_inds] **2 + np.array(10**logf, ndmin=2).T * interpolated_fluxes**2)
@@ -921,7 +940,7 @@ class specfann(object):
     # -------------------MCMC functions--------------------
 
 
-    def run_mcmc(self, initial_positions=None, n_walkers=None, n_steps=None, jitter=False, return_sampler=False):
+    def run_mcmc(self, initial_positions=None, n_walkers=None, n_steps=None, fuzz=False, return_sampler=False):
         """
         Run the MCMC simulation to sample the parameter space.
 
@@ -936,8 +955,8 @@ class specfann(object):
         if n_steps is None:
             n_steps = self.n_steps
 
-        if jitter:
-            print("Using jitter in the likelihood calculation.")
+        if fuzz:
+            print("Using fuzz in the likelihood calculation.")
             self.parameters.logf.free()
         else:
             self.parameters.logf.fix(0.0)
@@ -976,7 +995,7 @@ class specfann(object):
             initial_positions = initial_positions + 1e-4 * np.random.randn(n_walkers, len(self.free_parameters))
 
         # Create the sampler
-        sampler = emcee.EnsembleSampler(n_walkers, len(self.free_parameters), self.log_probability, args=(jitter,), vectorize=True)
+        sampler = emcee.EnsembleSampler(n_walkers, len(self.free_parameters), self.log_probability, args=(fuzz,), vectorize=True)
 
         # Run the MCMC simulation
         sampler.run_mcmc(initial_positions, n_steps, progress=True)
@@ -1027,10 +1046,20 @@ class specfann(object):
         samples = sampler.get_chain(discard=burnin)
 
         fig, axs = plt.subplots(len(self.mcmc_free_parameters), figsize=(10, 7), sharex=True)
+        labels = []
         for i, param in enumerate(self.mcmc_free_parameters):
             axs[i].plot(samples[:, :, i], "k", alpha=0.3)
             axs[i].set_xlim(0, len(samples))
-            axs[i].set_ylabel(param)
+            
+            if self.parameters.__dict__[param].latex_string is not None:
+                param_label = self.parameters.__dict__[param].latex_string
+            else:
+                param_label = param
+            param_name = param_label
+            labels.append(param_name)
+            if self.parameters.__dict__[param].unit is not None:
+                param_label += f' ({self.parameters.__dict__[param].unit})'
+            axs[i].set_ylabel(param_label)
 
         if save_path is not None:
             plt.savefig(save_path.split('.')[0] + '_trace.png')
@@ -1039,17 +1068,19 @@ class specfann(object):
 
         flat_samples = sampler.get_chain(discard=burnin, flat=True, thin=thin)
 
-        fig = corner.corner(flat_samples, labels=self.mcmc_free_parameters, show_titles=True)
+        fig = corner.corner(flat_samples, labels=labels, show_titles=True)
         plt.show()
 
 
-    def plot_MCMC_fit(self, sampler = None, burnin=100, save_path=None):
+    def plot_MCMC_fit(self, sampler = None, burnin=100, save_path=None, line_labels=None, component_labels=None):
         """
         Plot the MCMC fit results against the observed data.
 
         Parameters:
         samples (array-like): The samples from the MCMC simulation.
         save_path (str): Path to save the plot. If None, the plot will not be saved.
+        line_labels (bool): Whether to display labels for each line.
+        component_labels (bool): Whether to display labels for each component.
         """
 
         if sampler is None:
@@ -1083,7 +1114,9 @@ class specfann(object):
             axs[i].plot(obs_wavelength, self.observed_flux[obs_inds], 'k-', label='Observed')
             axs[i].plot(obs_wavelength, model_mean, 'r-', label='Best Fit')
             axs[i].fill_between(obs_wavelength, model_mean-model_std, model_mean+model_std, color='lightcoral', alpha=0.8, label='1-sigma')
-            axs[i].set_xlabel('Wavelength (Angstrom)')
+            if line_labels:
+                axs[i].text(0.025, 0.025, f'{line}', transform=axs[i].transAxes, fontsize=12, verticalalignment='bottom')
+            axs[i].set_xlabel(r'Wavelength ($\mathrm{\AA}$)')
             axs[i].set_ylabel('Flux')
 
         if i < len(axs) - 1:
@@ -1143,12 +1176,12 @@ class specfann(object):
 
     # -------------------Nested sampling (ultranest) functions--------------------
 
-    def run_nested_sampling(self, jitter=False, return_result=False, step_sampler=None, log_dir=None, **kwargs):
+    def run_nested_sampling(self, fuzz=False, return_result=False, step_sampler=None, log_dir=None, **kwargs):
         """
         Run nested sampling with ultranest to sample the parameter space.
 
         Parameters:
-        jitter (bool): Whether to include jitter in the likelihood calculation.
+        fuzz (bool): Whether to include fuzz in the likelihood calculation.
         return_result (bool): Whether to return the ultranest result object.
         step_sampler: If None, use default exploration. If True or 'slice', use PopulationSimpleSliceSampler
             (popsize=5, nsteps=20, generate_mixture_random_direction). kwargs step_sampler_popsize and
@@ -1165,7 +1198,7 @@ class specfann(object):
         if ultranest is None:
             raise ImportError("ultranest is required for nested sampling. Install with: pip install ultranest")
 
-        if jitter:
+        if fuzz:
             self.parameters.logf.free()
         else:
             self.parameters.logf.fix(0.0)
@@ -1185,7 +1218,7 @@ class specfann(object):
         def log_probability(theta):
             """Log probability (log prior + log likelihood). Same as MCMC. Non-finite replaced with -1e100 for ultranest."""
             theta = np.array(theta, ndmin=2)
-            logp = self.log_probability(theta, jitter=jitter)
+            logp = self.log_probability(theta, fuzz=fuzz)
             return np.where(np.isfinite(logp), logp, -1e100)
 
         ns_log_dir = None
@@ -1267,10 +1300,11 @@ class specfann(object):
 
         flat_samples = self._get_nested_sampling_posterior_samples(result=result, thin=1)
         params = self.nested_sampling_free_parameters
-        fig = corner.corner(flat_samples, labels=params, show_titles=True)
+        labels = [p if self.parameters.__dict__[p].latex_string is None else self.parameters.__dict__[p].latex_string for p in params]
+        fig = corner.corner(flat_samples, labels=labels, show_titles=True)
         plt.show()
 
-    def plot_nested_sampling_fit(self, result=None, n_draw=1000, save_path=None):
+    def plot_nested_sampling_fit(self, result=None, n_draw=1000, save_path=None, line_labels=False, component_labels=False):
         """
         Plot the nested sampling fit results against the observed data.
 
@@ -1278,6 +1312,8 @@ class specfann(object):
         result: Ultranest result object. If None, uses self.ultranest_result.
         n_draw (int): Number of posterior samples to draw for model spread.
         save_path (str): Path to save the plot. If None, the plot will not be saved.
+        line_labels (bool): Whether to display labels for each line.
+        component_labels (bool): Whether to display labels for each component.
         """
         if result is None:
             if not hasattr(self, 'ultranest_result'):
@@ -1291,7 +1327,7 @@ class specfann(object):
         param_set = self.parse_parameter_set(model_args)
 
         subplots_dict = {1:[1, 1], 2:[1, 2], 3:[1,3], 4:[2, 2], 5:[2, 3], 6:[2,3], 7:[2,4], 8:[2,4], 9:[3,3], 10:[3, 4], 11:[3, 4], 12:[3, 4], 13:[3, 5], 14:[3, 5], 15:[3, 5], 16:[4,4], 17:[4,5], 18:[4,5], 19:[4,5], 20:[4,5], 21:[4,6], 22:[4,6], 23:[4,6], 24:[4,6], 25:[5,5], 26:[5,6], 27:[5,6], 28:[5,6], 29:[5,6], 30:[5,6], 31:[5,7], 32:[5,7], 33:[5,7], 34:[5,7], 35:[5,7], 36:[6,6], 37:[6,7], 38:[6,7], 39:[6,7], 40:[6,7], 41:[6,8], 42:[6,8], 43:[6,8], 44:[6,8], 45:[6,8]}
-        fig, axs = plt.subplots(subplots_dict[len(self.line_list)][0], subplots_dict[len(self.line_list)][1], figsize=(subplots_dict[len(self.line_list)][1]*4, subplots_dict[len(self.line_list)][0]*4))
+        fig, axs = plt.subplots(subplots_dict[len(self.line_list)][0], subplots_dict[len(self.line_list)][1], figsize=(subplots_dict[len(self.line_list)][1]*4, subplots_dict[len(self.line_list)][0]*3))
         axs = axs.ravel()
 
         for i, line in enumerate(self.line_list.keys()):
@@ -1304,8 +1340,15 @@ class specfann(object):
             axs[i].plot(obs_wavelength, self.observed_flux[obs_inds], 'k-', label='Observed')
             axs[i].plot(obs_wavelength, model_mean, 'r-', label='Best Fit')
             axs[i].fill_between(obs_wavelength, model_mean - model_std, model_mean + model_std, color='lightcoral', alpha=0.8, label='1-sigma')
-            axs[i].set_xlabel('Wavelength (Angstrom)')
+            if line_labels:
+                axs[i].text(0.025, 0.025, f'{line}', transform=axs[i].transAxes, fontsize=12, verticalalignment='bottom')
+            axs[i].set_xlabel(r'Wavelength ($\mathrm{\AA}$)')
             axs[i].set_ylabel('Flux')
+        
+        if i < len(axs) - 1:
+            for j in range(i+1, len(axs)):
+                axs[j].axis('off')
+
         plt.show()
 
     def print_nested_sampling_results(self, result=None):
@@ -1391,7 +1434,7 @@ class specfann(object):
             # interpolated_fluxes = self.interp_model_lines_to_observed(obs_wavelength, shifted_wavelengths, broadened_fluxes)
             axs[i].plot(obs_wavelength, self.observed_flux[obs_inds], 'k-', label='Observed')
             axs[i].plot(obs_wavelength, interpolated_fluxes.T, 'r-', label='Best Fit')
-            axs[i].set_xlabel('Wavelength (Angstrom)')
+            axs[i].set_xlabel(r'Wavelength ($\mathrm{\AA}$)')
             axs[i].set_ylabel('Flux')
 
         if save_path is not None:
@@ -1625,12 +1668,19 @@ class specfann(object):
             param_values = ga_results.populations[:, :, i].flatten()
             generations = np.array([np.arange(ga_results.n_generations)]*ga_results.population_size).T.flatten()
             generations.flatten()
-            axs[i].scatter(param_values, diagnostic_values, c= generations, cmap='viridis', alpha=0.5)
-            axs[i].set_xlabel(param)
+            axs[i].scatter(param_values, diagnostic_values, c= generations, cmap='viridis', alpha=0.5, rasterized=True)
+            if self.parameters.__dict__[param].latex_string is not None:
+                param_label = self.parameters.__dict__[param].latex_string
+            else:
+                param_label = param
+            param_name = param_label
+            if self.parameters.__dict__[param].unit is not None:
+                param_label += f' ({self.parameters.__dict__[param].unit})'
+            axs[i].set_xlabel(param_label)
             axs[i].set_ylabel(title)
             axs[i].set_xlim(ga_results.ga_params[param].min, ga_results.ga_params[param].max)
             axs[i].set_ylim(0, np.max(diagnostic_values)*1.1)
-            axs[i].set_title(r'%s = $%0.2f \pm \genfrac{}{}{0}{}{%0.2f}{%0.2f}$'%(param, ga_results.best_fit_model[i], best_fit_errors[i][1] - ga_results.best_fit_model[i], ga_results.best_fit_model[i] - best_fit_errors[i][0]))
+            axs[i].set_title(r'%s = $%0.2f \pm \genfrac{}{}{0}{}{%0.2f}{%0.2f}$'%(param_name, ga_results.best_fit_model[i], best_fit_errors[i][1] - ga_results.best_fit_model[i], ga_results.best_fit_model[i] - best_fit_errors[i][0]))
             axs[i].fill_betweenx([0, np.max(diagnostic_values)*1.1], best_fit_errors[i][0], best_fit_errors[i][1], color='lightcoral', alpha=0.3)
 
         if i < len(axs) - 1:
@@ -1648,7 +1698,7 @@ class specfann(object):
             plt.show()
 
 
-    def plot_GA_fit(self, ga_results=None, sigma=2, save_path=None):
+    def plot_GA_fit(self, ga_results=None, sigma=2, save_path=None, line_labels=False, component_labels=False):
         """
         Plot the best-fit model from the genetic algorithm against the observed data.
 
@@ -1656,6 +1706,8 @@ class specfann(object):
         ga_results (ga_result_summary): The results of the genetic algorithm.
         sigma (int): The number of sigma to use for error bars.
         save_path (str): Path to save the plot. If None, the plot will not be saved.
+        line_labels (bool): Whether to display labels for each line.
+        component_labels (bool): Whether to display labels for each component.
         """
 
         if ga_results is None:
@@ -1698,8 +1750,14 @@ class specfann(object):
             axs[i].plot(obs_wavelength, self.observed_flux[obs_inds], 'k-', label='Observed')
             axs[i].plot(obs_wavelength, interpolated_fluxes[-1], 'r-', label='Best Fit')
             axs[i].fill_between(obs_wavelength, model_min, model_max, color='lightcoral', alpha=0.5, label='1-sigma', zorder=9)
-            axs[i].set_xlabel('Wavelength (Angstrom)')
+            if line_labels:
+                axs[i].text(0.025, 0.025, f'{line}', transform=axs[i].transAxes, fontsize=12, verticalalignment='bottom')
+            axs[i].set_xlabel(r'Wavelength ($\mathrm{\AA}$)')
             axs[i].set_ylabel('Flux')
+
+        if i < len(axs) - 1:
+            for j in range(i+1, len(axs)):
+                axs[j].axis('off')
 
         if self.object_name is not None:
             plt.suptitle(f'{self.object_name} GA fit', fontsize=16)
@@ -1735,7 +1793,7 @@ class specfann(object):
             raise ValueError("Invalid sigma value. Choose 1 or 2.")
 
         print(f"GA Results Summary ({sigma}-sigma):")
-        for i, param in enumerate(self.free_parameters):
+        for i, param in enumerate(ga_results.free_parameters):
             print(f"{param} = ".rjust(15) + f" {ga_results.best_fit_model[i]}  ( +{best_fit_errors[i][1] - ga_results.best_fit_model[i]:.3f}; -{ga_results.best_fit_model[i] - best_fit_errors[i][0]:.3f})")
         # print(f"Best fit parameters: {self.GA_results.best_fit_model}")
         # print(f"Best fit errors: {self.GA_results.best_fit_errors}")
