@@ -26,17 +26,18 @@ Installation
         keras 3.6.0
         corner 2.2.3
         tqdm 4.67.1
+        ultranest 4.5.0
 
 *   In addition to the git repository, you will need to download the bundle of neural networks that SpecFANN uses to generates models. These can be downloaded [here](https://cloud.iac.es/index.php/s/H7FdjCcJcaZJSzN).  Alternatively, we have provided a convenience function that will retrieve the bundles directly from the cloud and store them in the default directory `~/.specfann/bundles/`.  This can be done by calling the following specfann function: 
 
         import specfann
         specfann.install_bundle(bundle_name, bundle_path = None)
 
-Where `bundle_name` is the name of the bundle and `bundle_path` is an optional parameter if you prefer to store the bundle in a location different than the default.  For now, two bundles are available corresponding to Milky Way and SMC metallicity: the `MW_v1.1.tgz` and `SMC_v1.0` bundles (~2GB each).  While SpecFANN is written in a way where the bundle can be stored in any location, we recommend that to begin, you use the convenience function provided above, however if you wish to set up the bundles manually, you can place the bundle in the `bundles` folder within the git repo directory and untar it there.  By default, SpecFANN will look for the `MW_v1.1` bundle first in the `~/.specfann/bundles/` directory and second in the relative path (to specfann.py): `models/MW_v1.1`, but an alternative bundle and/or bundle file path can be specified later.
+Where `bundle_name` is the name of the bundle and `bundle_path` is an optional parameter if you prefer to store the bundle in a location different than the default.  For now, two bundles are available corresponding to Milky Way and SMC metallicity: the `MW_v1.2.tgz` and `SMC_v1.0` bundles (~2GB each).  While SpecFANN is written in a way where the bundle can be stored in any location, we recommend that to begin, you use the convenience function provided above, however if you wish to set up the bundles manually, you can place the bundle in the `bundles` folder within the git repo directory and untar it there.  By default, SpecFANN will look for the `MW_v1.2` bundle first in the `~/.specfann/bundles/` directory and second in the relative path (to specfann.py): `bundles/MW_v1.2`, but an alternative bundle and/or bundle file path can be specified later.
 
-        mv ~/Downloads/MW_v1.0.tgz ~/SpecFANN/bundles/.
+        mv ~/Downloads/MW_v1.2.tgz ~/SpecFANN/bundles/.
         cd ~/SpecFANN/bundles/
-        tar -xvzf MW_v1.0.tgz
+        tar -xvzf MW_v1.2.tgz
 
 
 SpecFANN can be run directly in the git directory, or if you prefer, you can add the git directory to your Python path and you can run SpecFANN from any location.  
@@ -51,7 +52,7 @@ To make sure the installation was successful, cd into the SpecFANN git directory
 If there is no error message following the second command, then things should be working properly.  If you placed the bundle in a different location than what was recommended above, then in the call to `specfann.specfann()`, you will need to pass the path to the bundle using the `bundle_path = ` argument:
 
         import specfann
-        s = specfann.specfann(bundle_path = 'path/to/MW_v1.0') 
+        s = specfann.specfann(bundle_path = 'path/to/MW_v1.2') 
 
 
 Getting Started

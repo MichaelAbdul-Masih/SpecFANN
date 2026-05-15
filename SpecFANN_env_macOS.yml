@@ -1,4 +1,4 @@
-name: SpecFANN
+name: SpecFANN_env
 channels:
   - conda-forge
   - https://repo.anaconda.com/pkgs/main
@@ -265,5 +265,5 @@ dependencies:
   - zstandard=0.23.0=py312hea69d52_2
   - zstd=1.5.7=h6491c7d_2
   - pip:
-      - ultranest
-prefix: /opt/anaconda3/envs/SpecFANN
+      - ultranest==4.5.0
+prefix: /opt/anaconda3/envs/SpecFANN_env
