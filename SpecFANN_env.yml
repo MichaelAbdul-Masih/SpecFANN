@@ -253,4 +253,5 @@ dependencies:
       - numpy==1.26.4
       - pyastronomy==0.22.0
       - quantities==0.16.2
+      - ultranest==4.5.0
 prefix: /home/michael/software/anaconda3/envs/SpecFANN_env
