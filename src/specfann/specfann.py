@@ -1,6 +1,3 @@
-__version__ = '0.2.0'
-
-
 import os
 from datetime import datetime
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' #Suppress TensorFlow warnings
@@ -16,7 +13,7 @@ from scipy.special import erf
 from scipy import stats
 import corner
 import dill as pickle
-import pyGA as GA
+from . import pyGA as GA
 import ultranest
 import ultranest.popstepsampler
 from tqdm import trange
@@ -253,7 +250,7 @@ def list_available_bundles():
     #     return bundles
     # else:
     #     raise OSError("Failed to retrieve bundle list from the cloud. Status code: {}".format(response.status_code))
-    return ['MW_v1.0', 'MW_v1.1', 'MW_v1.2', 'SMC_v1.0']
+    return ['MW_v1.0', 'MW_v1.1', 'MW_v1.2', 'MW_v1.3', 'SMC_v1.0']
 
 
 def install_bundle(bundle_name, bundle_path = None):
@@ -418,8 +415,7 @@ class line_to_fit(object):
         self.line_name = line
         model_filename = '/'.join([nn_path, nn_model_string.replace('$LINE$', line)])
         wavelength_filename = '/'.join([nn_path, nn_wavelength_string.replace('$LINE$', line)])
-        # self.model = keras.saving.load_model('bundles/fluxes_%s_model.keras' %line)
-        # self.wavelength = np.load('bundles/wnew_%s.npy'%line)
+        
         self.model = keras.saving.load_model(model_filename)
         self.wavelength = np.load(wavelength_filename)
         if fit_range is None:
@@ -525,8 +521,8 @@ class specfann(object):
 
             self.mean, self.std = np.loadtxt(self.nn_bundle_path + 'norm_array_fw.txt')
         except ImportError:
-            if nn_bundle_path == 'bundles/MW_v1.1/':
-                print("No specfann bundle found in the default relative path 'bundles/MW_v1.1/'. Please ensure you have downloaded the bundle and in the correct place.  For more information, please see setup instructions at https://github.com/MichaelAbdul-Masih/SpecFANN")
+            if nn_bundle_path == 'bundles/MW_v1.3/':
+                print("No specfann bundle found in the default relative path 'bundles/MW_v1.3/'. Please ensure you have downloaded the bundle and in the correct place.  For more information, please see setup instructions at https://github.com/MichaelAbdul-Masih/SpecFANN")
             else:
                 print(f"Could not import specfann bundle functions from {nn_bundle_path}. Please check the path to the bundle is properly set.")
 
