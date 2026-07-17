@@ -39,7 +39,7 @@ logging.getLogger("absl").setLevel(logging.ERROR)
 
 from . import specfann
 from . import pyGA
-from .io_functions import open_project
+from .io_functions import open_project, install_bundle, list_available_bundles
 
 # from .specfann import *
 

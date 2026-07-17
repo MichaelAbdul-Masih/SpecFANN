@@ -445,7 +445,7 @@ class single_star(object):
                 raise ValueError("No nested sampling result found. Run run_nested_sampling() first.")
             result = self.ultranest_result
 
-        flat_samples = self._get_nested_sampling_posterior_samples(result=result, thin=1)
+        flat_samples = fitting._get_nested_sampling_posterior_samples(self, result=result, thin=1)
         n_draw = min(n_draw, len(flat_samples))
         inds = np.random.randint(len(flat_samples), size=n_draw)
         model_args = flat_samples[inds]

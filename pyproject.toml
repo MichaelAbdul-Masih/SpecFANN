@@ -2,6 +2,10 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build]
+include = ["LICENSE", "pyproject.toml", "README.md", "src"]
+exclude = ["/.*", "/data", "/tests"]
+
 [project]
 name = "specfann"
 version = "0.3.0"
@@ -40,6 +44,7 @@ dependencies = [
     "matplotlib",
     "dill",
     "ultranest",
+    "ipywidgets",
 ]
 
 [project.urls]
