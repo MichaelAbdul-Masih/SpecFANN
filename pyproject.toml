@@ -3,12 +3,11 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-include = ["LICENSE", "pyproject.toml", "README.md", "src"]
-exclude = ["/.*", "/data", "/tests"]
+exclude = ["results.specfann", "SpecFANN_Tutorial.ipynb", "/data", "/tests", "*.yml"]
 
 [project]
 name = "specfann"
-version = "0.3.0"
+version = "1.0.0"
 description = "SpecFANN - Spectroscopic Fitting via Artificial Neural Networks"
 readme = "README.md"
 requires-python = ">=3.10"

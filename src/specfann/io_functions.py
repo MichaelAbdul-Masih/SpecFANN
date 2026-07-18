@@ -30,7 +30,7 @@ def list_available_bundles():
     #     return bundles
     # else:
     #     raise OSError("Failed to retrieve bundle list from the cloud. Status code: {}".format(response.status_code))
-    return ['MW_v1.0', 'MW_v1.1', 'MW_v1.2', 'MW_v1.3', 'SMC_v1.0']
+    return ['MW_v1.0', 'MW_v1.1', 'MW_v1.2', 'MW_v1.3', 'MW_v1.4', 'SMC_v1.0']
 
 
 def install_bundle(bundle_name, bundle_path = None):
@@ -100,10 +100,7 @@ def set_nn_bundle_path(obj, nn_bundle_path):
 
         obj.mean, obj.std = np.loadtxt(obj.nn_bundle_path + 'norm_array_fw.txt')
     except ImportError:
-        if nn_bundle_path == 'bundles/MW_v1.3/':
-            print("No specfann bundle found in the default relative path 'bundles/MW_v1.3/'. Please ensure you have downloaded the bundle and in the correct place.  For more information, please see setup instructions at https://github.com/MichaelAbdul-Masih/SpecFANN")
-        else:
-            print(f"Could not import specfann bundle functions from {nn_bundle_path}. Please check that the bundle is installed and the path to the bundle is properly set. For more information, please see setup instructions at https://github.com/MichaelAbdul-Masih/SpecFANN")
+        print(f"Could not import specfann bundle functions from {nn_bundle_path}. Please check that the bundle is installed and the path to the bundle is properly set. For more information, please see setup instructions at https://github.com/MichaelAbdul-Masih/SpecFANN")
 
 
 

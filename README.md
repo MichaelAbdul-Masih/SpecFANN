@@ -48,12 +48,12 @@ To make sure the installation was successful, ensure you are in the correct pyth
 If there is no error message following the second command, then things should be working properly.  If you placed the bundle in a different location than what was recommended above, then in the call to `specfann.single_star()`, you will need to pass the path to the bundle using the `bundle_path = ` argument:
 
         import specfann
-        s = specfann.specfann(bundle_path = 'path/to/MW_v1.4') 
+        s = specfann.single_star(bundle_path = 'path/to/MW_v1.4') 
 
 
 Getting Started
 ---------------
-We've prepared a jupyter notebook that shows the SpecFANN workflow, and what customization options are available to fit your specific science case.  This can be found in the `SpecFANN_Tutorial.ipynb` notebook in the base SpecFANN directory. You will also need the example spectrum in the `data` folder. We recommend that you start here to learn the basics.
+We've prepared a jupyter notebook that shows the SpecFANN workflow, and what customization options are available to fit your specific science case.  This can be found in the `SpecFANN_Tutorial.ipynb` notebook in the SpecFANN github repository. You will also need the example spectrum in the `data` folder. We recommend that you start here to learn the basics.
 
 
 Change Log

@@ -15,7 +15,7 @@ class single_star(object):
     """
 
     def __init__(self, bundle_path=None, bundle_name=None):
-        default_bundle_name = 'MW_v1.3'
+        default_bundle_name = 'MW_v1.4'
 
         self.observed_wavelength = None
         self.observed_flux = None
