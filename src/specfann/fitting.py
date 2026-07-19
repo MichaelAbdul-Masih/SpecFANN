@@ -372,7 +372,7 @@ def plot_nested_sampling_results(obj, result=None):
         obj.ultranest_sampler.plot_run()
         obj.ultranest_sampler.plot_trace()
 
-    flat_samples = obj._get_nested_sampling_posterior_samples(result=result, thin=1)
+    flat_samples = _get_nested_sampling_posterior_samples(obj, result=result, thin=1)
     params = obj.nested_sampling_free_parameters
     labels = [p if obj.parameters.__dict__[p].latex_string is None else obj.parameters.__dict__[p].latex_string for p in params]
     fig = corner.corner(flat_samples, labels=labels, show_titles=True)
@@ -393,7 +393,7 @@ def print_nested_sampling_results(obj, result=None):
         if not hasattr(obj, 'ultranest_result'):
             raise ValueError("No nested sampling result found. Run run_nested_sampling() first.")
         result = obj.ultranest_result
-    flat_samples = obj._get_nested_sampling_posterior_samples(result=result, thin=1)
+    flat_samples = _get_nested_sampling_posterior_samples(obj, result=result, thin=1)
     n_iterations = result.get('ncall', 0) if isinstance(result, dict) else getattr(result, 'ncall', 0)
     logz = result.get('logz', result.get('logz_mean', np.nan)) if isinstance(result, dict) else getattr(result, 'logz', getattr(result, 'logz_mean', np.nan))
     print("Nested sampling results (fallback):")
