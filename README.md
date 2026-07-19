@@ -1,4 +1,4 @@
-# SpecFANN 0.2.0
+# SpecFANN 1.0.0
 
 Introduction
 ------------
@@ -7,74 +7,58 @@ SpecFANN (Spectroscopic Fitting via Artificial Neural Networks) is a deep learni
 
 Installation
 ------------
+There are several ways to install SpecFANN, depending on your specific needs.
+
+### pip
+The easiest way to install SpecFANN is via pip:
+
+        pip install specfann
+
+### From source
+If you prefer, you can install SpecFANN from the source with the following steps:
+
 *   Clone the git repository to create a local copy.
 
         git clone https://github.com/MichaelAbdul-Masih/SpecFANN.git
 
-*   SpecFANN is written in Python 3 and has several dependencies that are needed to make it run.  For your convenience, we have provided an environment file (SpecFANN_env.yml for linux users, or SpecFANN_env_macOS.yml for mac users), which you can use to create an environment that already has all of these dependencies.  If you are using Anaconda you can create the environment as follows:
+*   Once downloaded, you can perform a local pip install:
 
         cd SpecFANN/
-        conda env create -f SpecFANN_env.yml
-        conda activate SpecFANN_env
+        pip install .
 
-*   If you prefer to create the environment yourself, the minimum package requirements can be found below:
-
-        astropy 7.0.0
-        numpy 1.26.4
-        matplotlib 3.10.0
-        scipy 1.15.3
-        keras 3.6.0
-        corner 2.2.3
-        tqdm 4.67.1
-        ultranest 4.5.0
-
-*   In addition to the git repository, you will need to download the bundle of neural networks that SpecFANN uses to generates models. These can be downloaded [here](https://cloud.iac.es/index.php/s/H7FdjCcJcaZJSzN).  Alternatively, we have provided a convenience function that will retrieve the bundles directly from the cloud and store them in the default directory `~/.specfann/bundles/`.  This can be done by calling the following specfann function: 
+### Installing the neural network bundles
+In addition to the git repository, you will need to download the bundle of neural networks that SpecFANN uses to generates models. These can be downloaded [here](https://cloud.iac.es/index.php/s/H7FdjCcJcaZJSzN).  Alternatively, we have provided a convenience function that will retrieve the bundles directly from the cloud and store them in the default directory `~/.specfann/bundles/`.  This can be done by calling the following specfann function: 
 
         import specfann
-        specfann.install_bundle(bundle_name, bundle_path = None)
+        specfann.install_bundle(bundle_name='MW_v1.4', bundle_path = None)
 
-Where `bundle_name` is the name of the bundle and `bundle_path` is an optional parameter if you prefer to store the bundle in a location different than the default.  For now, two bundles are available corresponding to Milky Way and SMC metallicity: the `MW_v1.2.tgz` and `SMC_v1.0` bundles (~2GB each).  While SpecFANN is written in a way where the bundle can be stored in any location, we recommend that to begin, you use the convenience function provided above, however if you wish to set up the bundles manually, you can place the bundle in the `bundles` folder within the git repo directory and untar it there.  By default, SpecFANN will look for the `MW_v1.2` bundle first in the `~/.specfann/bundles/` directory and second in the relative path (to specfann.py): `bundles/MW_v1.2`, but an alternative bundle and/or bundle file path can be specified later.
+Where `bundle_name` is the name of the bundle and bundle_path is an optional parameter if you prefer to store the bundle in a location different than the default.  For now, two bundles are available corresponding to Milky Way and SMC metallicity: the `MW_v1.4.tgz` and `SMC_v1.0` bundles (~2GB each).  While SpecFANN is written in a way where the bundle can be stored in any location, we recommend that to begin, you use the convenience function provided above, however if you wish to set up the bundles manually, you can place the bundle in your preferred directory and untar it there.  By default, SpecFANN will look for the `MW_v1.4` bundle in the `~/.specfann/bundles/` directory but an alternative bundle and/or bundle file path can be specified later.
 
-        mv ~/Downloads/MW_v1.2.tgz ~/SpecFANN/bundles/.
-        cd ~/SpecFANN/bundles/
-        tar -xvzf MW_v1.2.tgz
-
-
-SpecFANN can be run directly in the git directory, or if you prefer, you can add the git directory to your Python path and you can run SpecFANN from any location.  
+        mv ~/Downloads/MW_v1.4.tgz ~/.specfann/bundles/.
+        cd ~/.specfann/bundles/
+        tar -xvzf MW_v1.4.tgz
 
 
 ### Test the Installation
-To make sure the installation was successful, cd into the SpecFANN git directory, ensure you are in the correct conda environment, initiate a python instance and run the following commands:
+To make sure the installation was successful, ensure you are in the correct python environment, initiate a python instance and run the following commands:
 
         import specfann
-        s = specfann.specfann() 
+        s = specfann.single_star() 
 
-If there is no error message following the second command, then things should be working properly.  If you placed the bundle in a different location than what was recommended above, then in the call to `specfann.specfann()`, you will need to pass the path to the bundle using the `bundle_path = ` argument:
+If there is no error message following the second command, then things should be working properly.  If you placed the bundle in a different location than what was recommended above, then in the call to `specfann.single_star()`, you will need to pass the path to the bundle using the `bundle_path = ` argument:
 
         import specfann
-        s = specfann.specfann(bundle_path = 'path/to/MW_v1.2') 
+        s = specfann.single_star(bundle_path = 'path/to/MW_v1.4') 
 
 
 Getting Started
 ---------------
-We've prepared a jupyter notebook that shows the SpecFANN workflow, and what customization options are available to fit your specific science case.  This can be found in the `SpecFANN_Tutorial.ipynb` notebook in the base SpecFANN directory.  We recommend that you start here to learn the basics.
+We've prepared a jupyter notebook that shows the SpecFANN workflow, and what customization options are available to fit your specific science case.  This can be found in the `SpecFANN_Tutorial.ipynb` notebook in the SpecFANN github repository. You will also need the example spectrum in the `data` folder. We recommend that you start here to learn the basics.
 
 
 Change Log
 ---------------
 
-### 0.2.0 - Nested sampling introduced; added and optimized broadening functions
+### 1.0.0 - official release of SpecFANN v1.0
 
-* implemented Nested Sampling
-* vectorized rotational broadening function
-* implemented macroturbulent and instrumental broadening
-* added ability to specify wavelength region for S/N calculation when loading spectrum
-* added ability to specity 1-sigma or 2-sigma for GA fit plots and outputs
-
-### 0.1.1 - fit plot bugfix/change to bundle location
-
-* Fixed bug where if more than 16 lines were used in a fit simultaneously, the XXX_plot_fit functions would fail.  The number of lines has been increased to 45
-* Added support for downloading bundles from the cloud directly using specfann.install_bundle(bundle_name, bundle_path).  Also, the default bundle has been updated from `MW_v1.0` to `MW_v1.1`
-* Added option to output GA results to a text file. 
-
-### 0.1.0 - Initialization of SpecFANN repo
+* If upgrading from a prerelease version (i.e. v0.X.X), you will need to do a clean install. Please note that specfann saved files from previous versions will not work with v1.0.0.  Moving forward we will do our best to ensure backwards compatibility.  Important changes will be documented in the Change Log for each new release.

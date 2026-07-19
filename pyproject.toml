@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+exclude = ["results.specfann", "SpecFANN_Tutorial.ipynb", "/data", "/tests", "*.yml"]
+
+[project]
+name = "specfann"
+version = "1.0.0"
+description = "SpecFANN - Spectroscopic Fitting via Artificial Neural Networks"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0-or-later" }
+authors = [
+  { name="Michael Abdul-Masih", email="michael.abdul-masih@iac.es" },
+  { name="Thibault Lechien", email="lechien@mpa-garching.mpg.de" },
+]
+maintainers = [
+    { name="Michael Abdul-Masih", email="michael.abdul-masih@iac.es" },
+]
+classifiers = [
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Topic :: Education",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "numpy",
+    "scipy",
+    "keras>=3.6.0",
+    "tensorflow>=2.18.0",
+    "tqdm",
+    "emcee",
+    "corner",
+    "matplotlib",
+    "dill",
+    "ultranest",
+    "ipywidgets",
+]
+
+[project.urls]
+Homepage = "https://github.com/MichaelAbdul-Masih/SpecFANN"
+Issues = "https://github.com/MichaelAbdul-Masih/SpecFANN"

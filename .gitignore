@@ -1,5 +1,4 @@
 */
-!bundles/
-bundles/*
-!bundles/.gitkeep
+!src/
+!src/specfann/
 !data/

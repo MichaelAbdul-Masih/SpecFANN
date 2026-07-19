@@ -14,7 +14,7 @@ from collections import OrderedDict
 import sys
 
 if sys.version_info > (3,):
-    long = int
+    long = np.int64
 
 
 def crossover_raw(pop_pre_crossover, fitness, prob_type = 'rank'):
@@ -121,7 +121,7 @@ def mutation_raw_all(crossover_pop, mutation_rate = 0.25):
     return crossover_pop
 #Returns the chromosomes for a population after mutation has been applied.
 
-def creep_mutation_raw_all(mutated_pop, mutation_rate = 0.25):
+def creep_mutation_raw_all_old(mutated_pop, mutation_rate = 0.25):
     """
     The creep mutation introduces small changes to random digit in a parameter to ensure we are not leaving any gaps
     in the parameter space. There is also theory that this mutation enables you to converge on the actual solution, without it the
@@ -147,6 +147,94 @@ def creep_mutation_raw_all(mutated_pop, mutation_rate = 0.25):
         #creep_pop[individual_number] = str(abs(individual_longint)).zfill(chromosome_length)[-1*chromosome_length:]
     return creep_pop
 #Returns the chromosomes for a population after the creep mutation has been applied.
+
+
+def creep_mutation_raw_all(mutated_pop, mutation_rate = 0.25):
+    """
+    The creep mutation introduces small changes to random digit in a parameter to ensure we are not leaving any gaps
+    in the parameter space. There is also theory that this mutation enables you to converge on the actual solution, without it the
+    probability of changing the high precision digits in your value is low so you may get close to the solution but then mutate away
+    instead of honing in.
+    In practise this works by choosing a random digit in a parameter and adding or subtracting 1 to that digit
+    eg. if the 4th digit of 0.56785 was mutated the parameter would become 0.56795 or 0.56775. The probability of this happening and which digit is affected is determined by the mutation rate.
+    """
+    '''Must provide chromosomes for a population after crossover and random mutation, as well as a mutation rate.'''
+    chromosome_length = len(mutated_pop[0])
+    creep_pop = [i for i in  mutated_pop]
+    creep_pop = np.array(creep_pop, dtype='str')
+    creep_chance = np.random.rand(len(mutated_pop), chromosome_length)
+    creep_adjustment = np.random.choice(2, (len(mutated_pop), chromosome_length)) * 2 - 1
+    for individual_number in range(len(mutated_pop)):
+        individual_string = creep_pop[individual_number]
+        for locus in range(chromosome_length):
+            if creep_chance[individual_number][locus] <= mutation_rate:
+                new_val = str((int(individual_string[locus]) + creep_adjustment[individual_number][locus]) % 10)
+                individual_string = individual_string[:locus] + new_val + individual_string[locus+1:]
+                # if creep_adjustment[individual_number][locus] == 1:
+                #     individual_string = add_at_position(individual_string, locus)
+                # else:
+                #     individual_string = subtract_at_position(individual_string, locus)
+        creep_pop[individual_number] = individual_string.zfill(chromosome_length)
+        #creep_pop[individual_number] = str(abs(individual_longint)).zfill(chromosome_length)[-1*chromosome_length:]
+    return creep_pop
+#Returns the chromosomes for a population after the creep mutation has been applied.
+
+
+
+def add_at_position(num_str, pos, amount=1):
+    """
+    Add `amount` to the digit position `pos`
+    where pos=0 is the leftmost digit.
+    """
+
+    digits = list(num_str)
+
+    carry = amount
+    i = pos
+
+    while i >= 0 and carry:
+        current = ord(digits[i]) - ord('0')
+        total = current + carry
+
+        digits[i] = chr((total % 10) + ord('0'))
+        carry = total // 10
+
+        i -= 1
+
+    while carry:
+        digits.insert(0, chr((carry % 10) + ord('0')))
+        carry //= 10
+
+    return ''.join(digits)
+
+
+def subtract_at_position(num_str, pos, amount=1):
+    """
+    Subtract `amount` beginning at digit position `pos`.
+    """
+
+    digits = list(num_str)
+
+    borrow = amount
+    i = pos
+
+    while i >= 0 and borrow:
+        current = ord(digits[i]) - ord('0')
+
+        if current >= borrow:
+            digits[i] = chr((current - borrow) + ord('0'))
+            borrow = 0
+        else:
+            needed = borrow - current
+            digits[i] = chr((10 - needed) + ord('0'))
+            borrow = 1
+
+        i -= 1
+
+    if borrow:
+        raise ValueError("Result would be negative")
+
+    return ''.join(digits).lstrip('0') or '0'
 
 
 def adjust_mutation_rate(mutation_rate, fitnesses, fit_metric_min=0.05, fit_metric_max=0.25, mut_rate_min = .0005,
