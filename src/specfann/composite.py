@@ -9,9 +9,9 @@ from . import fitting
 
 
 
-class single_star(object):
+class composite(object):
     """
-    Class to fit the single star spectra using neural networks
+    Class to fit composite spectra using neural networks
     """
 
     def __init__(self, bundle_path=None, bundle_name=None):
@@ -21,18 +21,30 @@ class single_star(object):
         self.observed_flux = None
         self.observed_error = None
 
-        # Initialize the parameters for the single star model
         self.parameters = params.parameters()
-        self.parameters.teff = self.parameters.parameter('teff', 40000, bounds=[15000, 60000], latex_string=r'$T_{eff}$', unit=r'K')
-        self.parameters.logg = self.parameters.parameter('logg', 4.0, bounds=[2.0, 4.5], latex_string=r'$\log g$')
-        self.parameters.r = self.parameters.parameter('r', 7, bounds=[5, 30], latex_string=r'$R$', unit=r'R$_\odot$')
-        self.parameters.he = self.parameters.parameter('he', 0.1, bounds=[0.06, 0.3], latex_string=r'$Y_\mathrm{He}$')
-        self.parameters.c = self.parameters.parameter('c', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{C}$')
-        self.parameters.n = self.parameters.parameter('n', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{N}$')
-        self.parameters.o = self.parameters.parameter('o', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{O}$')
-        self.parameters.si = self.parameters.parameter('si', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{Si}$')
-        self.parameters.vrot = self.parameters.parameter('vrot', 0, bounds=[0, 500], latex_string=r'$v \sin i$', unit=r'km s$^{-1}$')
-        self.parameters.gamma = self.parameters.parameter('gamma', 0, bounds=[-500, 500], latex_string=r'$\gamma$', unit=r'km s$^{-1}$')
+        self.parameters.teff_1 = self.parameters.parameter('teff_1', 40000, bounds=[15000, 60000], latex_string=r'$T_{eff, 1}$', unit=r'K')
+        self.parameters.logg_1 = self.parameters.parameter('logg_1', 4.0, bounds=[2.0, 4.5], latex_string=r'$\log g_1$')
+        self.parameters.r_1 = self.parameters.parameter('r_1', 7, bounds=[5, 30], latex_string=r'$R_1$', unit=r'R$_\odot$')
+        self.parameters.he_1 = self.parameters.parameter('he_1', 0.1, bounds=[0.06, 0.3], latex_string=r'$Y_\mathrm{He}_1$')
+        self.parameters.c_1 = self.parameters.parameter('c_1', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{C}_1$')
+        self.parameters.n_1 = self.parameters.parameter('n_1', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{N}_1$')
+        self.parameters.o_1 = self.parameters.parameter('o_1', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{O}_1$')
+        self.parameters.si_1 = self.parameters.parameter('si_1', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{Si}_1$')
+        self.parameters.vrot_1 = self.parameters.parameter('vrot_1', 0, bounds=[0, 500], latex_string=r'$v \sin i_1$', unit=r'km s$^{-1}$')
+        self.parameters.gamma_1 = self.parameters.parameter('gamma_1', 0, bounds=[-500, 500], latex_string=r'$\gamma_1$', unit=r'km s$^{-1}$')
+        self.parameters.lr_1 = self.parameters.parameter('lr_1', 0.5, bounds=[0, 1], latex_string=r'$l_\mathrm{ratio}_1$', unit=r'')
+
+        self.parameters.teff_2 = self.parameters.parameter('teff_2', 40000, bounds=[15000, 60000], latex_string=r'$T_{eff, 2}$', unit=r'K')
+        self.parameters.logg_2 = self.parameters.parameter('logg_2', 4.0, bounds=[2.0, 4.5], latex_string=r'$\log g_2$')
+        self.parameters.r_2 = self.parameters.parameter('r_2', 7, bounds=[5, 30], latex_string=r'$R_2$', unit=r'R$_\odot$')
+        self.parameters.he_2 = self.parameters.parameter('he_2', 0.1, bounds=[0.06, 0.3], latex_string=r'$Y_\mathrm{He}_2$')
+        self.parameters.c_2 = self.parameters.parameter('c_2', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{C}_2$')
+        self.parameters.n_2 = self.parameters.parameter('n_2', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{N}_2$')
+        self.parameters.o_2 = self.parameters.parameter('o_2', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{O}_2$')
+        self.parameters.si_2 = self.parameters.parameter('si_2', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{Si}_2$')
+        self.parameters.vrot_2 = self.parameters.parameter('vrot_2', 0, bounds=[0, 500], latex_string=r'$v \sin i_2$', unit=r'km s$^{-1}$')
+        self.parameters.gamma_2 = self.parameters.parameter('gamma_2', 0, bounds=[-500, 500], latex_string=r'$\gamma_2$', unit=r'km s$^{-1}$')
+
 
         if bundle_path is None:
             if bundle_name is None:

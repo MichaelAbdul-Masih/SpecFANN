@@ -13,7 +13,7 @@ class parameters(object):
     Class to hold the parameters for the model
     """
 
-    def __init__(self, teff = 40000, logg = 4.0, r = 7, he = 0.1, c = 7.5, n = 7.5, o = 7.5, si = 7.5, vrot = 0, vmacro = 0, inst_res = 10000, gamma = 0):
+    def __init__(self, vmacro = 0, inst_res = 10000):
         """
         Initialize the parameters object.
         Parameters:
@@ -31,18 +31,8 @@ class parameters(object):
         gamma (float): Systemic radial velocity in km/s.
         """
 
-        self.teff = self.parameter('teff', teff, bounds=[15000, 60000], latex_string=r'$T_{eff}$', unit=r'K')
-        self.logg = self.parameter('logg', logg, bounds=[2.0, 4.5], latex_string=r'$\log g$')
-        self.r = self.parameter('r', r, bounds=[5, 30], latex_string=r'$R$', unit=r'R$_\odot$')
-        self.he = self.parameter('he', he, bounds=[0.06, 0.3], latex_string=r'$Y_\mathrm{He}$')
-        self.c = self.parameter('c', c, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{C}$')
-        self.n = self.parameter('n', n, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{N}$')
-        self.o = self.parameter('o', o, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{O}$')
-        self.si = self.parameter('si', si, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{Si}$')
-        self.vrot = self.parameter('vrot', vrot, bounds=[0, 500], latex_string=r'$v \sin i$', unit=r'km s$^{-1}$')
         self.vmacro = self.parameter('vmacro', vmacro, bounds=[0, 500], latex_string=r'$v_\mathrm{macro}$', unit=r'km s$^{-1}$')
         self.inst_res = self.parameter('inst_res', inst_res, bounds=None, fixed=True, latex_string=r'$\mathcal{R}$')
-        self.gamma = self.parameter('gamma', gamma, bounds=[-500, 500], latex_string=r'$\gamma$', unit=r'km s$^{-1}$')
         self.logf = self.parameter('logf', 0.0, bounds=[-10, 10], fixed=True, hidden=True, latex_string=r'$\log f$')  # log of the variance scaling factor
 
     def summary(self, show_hidden=False):

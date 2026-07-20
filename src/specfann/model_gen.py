@@ -76,6 +76,46 @@ def combined_broadening_vectorized(wavelength,fluxes,vrots,vmacros,inst_res=None
     return wavelength, broadened_fluxes
 
 
+def inst_broadening_vectorized(wavelength,fluxes,inst_res):
+
+    c = 299792.458
+    # convert wavelength array into velocity space, and ensure it is equidistant
+    wave_ = np.log(wavelength)
+    velo_ = np.linspace(wave_[0],wave_[-1],len(wave_))
+    dvelo = velo_[1]-velo_[0]
+
+    f = si.interp1d(wave_, fluxes, fill_value=np.array([1.0]), bounds_error=False)
+    fluxes_ = f(velo_)
+
+    #--------------- Instrumental broadening standard deviation ----------------
+    if inst_res is not None:
+        inst_fwhm = 1 / inst_res
+        inst_std = inst_fwhm / 2.3548
+    else:
+        inst_std = 0
+
+    # compute the velocity array of the kernels
+    max_velocity = np.max(inst_std)*5/2
+    n = 2*math.ceil(max_velocity/dvelo) + 1
+    kernel_velocity = np.linspace(-max_velocity, max_velocity, n)
+
+    #---------------Instrumental KERNEL----------------
+    if np.ndim(inst_res) == 0:
+        inst_kernel = np.exp(-1 * (kernel_velocity)**2 / (2*inst_std**2))
+        inst_kernel /= inst_kernel.sum()
+        flux_conv = fftconvolve(1-fluxes_,inst_kernel[None,:],mode='same', axes=1)
+
+    elif np.ndim(inst_res) == 1:
+        inst_kernels = np.exp(-1 * (kernel_velocity[None,:])**2 / (2*inst_std[:,None]**2))
+        inst_kernels /= inst_kernels.sum(axis=1)[:,None]
+        flux_conv = fftconvolve(1-fluxes_,inst_kernels,mode='same', axes=1)
+
+
+    f = si.interp1d(np.exp(velo_), 1-flux_conv, fill_value=np.array([1.0]), bounds_error=False)
+    broadened_fluxes = f(wavelength)
+    return wavelength, broadened_fluxes
+
+
 
 def generate_model(obj, param_set):
     """
