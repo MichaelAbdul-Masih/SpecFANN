@@ -21,7 +21,18 @@ class single_star(object):
         self.observed_flux = None
         self.observed_error = None
 
+        # Initialize the parameters for the single star model
         self.parameters = params.parameters()
+        self.parameters.teff = self.parameters.parameter('teff', 40000, bounds=[15000, 60000], latex_string=r'$T_{eff}$', unit=r'K')
+        self.parameters.logg = self.parameters.parameter('logg', 4.0, bounds=[2.0, 4.5], latex_string=r'$\log g$')
+        self.parameters.r = self.parameters.parameter('r', 7, bounds=[5, 30], latex_string=r'$R$', unit=r'R$_\odot$')
+        self.parameters.he = self.parameters.parameter('he', 0.1, bounds=[0.06, 0.3], latex_string=r'$Y_\mathrm{He}$')
+        self.parameters.c = self.parameters.parameter('c', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{C}$')
+        self.parameters.n = self.parameters.parameter('n', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{N}$')
+        self.parameters.o = self.parameters.parameter('o', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{O}$')
+        self.parameters.si = self.parameters.parameter('si', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{Si}$')
+        self.parameters.vrot = self.parameters.parameter('vrot', 0, bounds=[0, 500], latex_string=r'$v \sin i$', unit=r'km s$^{-1}$')
+        self.parameters.gamma = self.parameters.parameter('gamma', 0, bounds=[-500, 500], latex_string=r'$\gamma$', unit=r'km s$^{-1}$')
 
         if bundle_path is None:
             if bundle_name is None:
