@@ -31,7 +31,8 @@ class composite(object):
         self.parameters.o_1 = self.parameters.parameter('o_1', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{O}_1$')
         self.parameters.si_1 = self.parameters.parameter('si_1', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{Si}_1$')
         self.parameters.vrot_1 = self.parameters.parameter('vrot_1', 0, bounds=[0, 500], latex_string=r'$v \sin i_1$', unit=r'km s$^{-1}$')
-        self.parameters.gamma_1 = self.parameters.parameter('gamma_1', 0, bounds=[-500, 500], latex_string=r'$\gamma_1$', unit=r'km s$^{-1}$')
+        self.parameters.vmacro_1 = self.parameters.parameter('vmacro_1', 0, bounds=[0, 500], latex_string=r'$v_\mathrm{macro}_1$', unit=r'km s$^{-1}$')
+        self.parameters.rv_1 = self.parameters.parameter('rv_1', 0, bounds=[-500, 500], latex_string=r'$rv_1$', unit=r'km s$^{-1}$')
         self.parameters.lr_1 = self.parameters.parameter('lr_1', 0.5, bounds=[0, 1], latex_string=r'$l_\mathrm{ratio}_1$', unit=r'')
 
         self.parameters.teff_2 = self.parameters.parameter('teff_2', 40000, bounds=[15000, 60000], latex_string=r'$T_{eff, 2}$', unit=r'K')
@@ -43,8 +44,8 @@ class composite(object):
         self.parameters.o_2 = self.parameters.parameter('o_2', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{O}_2$')
         self.parameters.si_2 = self.parameters.parameter('si_2', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{Si}_2$')
         self.parameters.vrot_2 = self.parameters.parameter('vrot_2', 0, bounds=[0, 500], latex_string=r'$v \sin i_2$', unit=r'km s$^{-1}$')
-        self.parameters.gamma_2 = self.parameters.parameter('gamma_2', 0, bounds=[-500, 500], latex_string=r'$\gamma_2$', unit=r'km s$^{-1}$')
-
+        self.parameters.vmacro_2 = self.parameters.parameter('vmacro_2', 0, bounds=[0, 500], latex_string=r'$v_\mathrm{macro}_2$', unit=r'km s$^{-1}$')
+        self.parameters.delta_rv = self.parameters.parameter('delta_rv', 10, bounds=[0, 1000], latex_string=r'$\Delta rv$', unit=r'km s$^{-1}$')
 
         if bundle_path is None:
             if bundle_name is None:
@@ -183,7 +184,7 @@ class composite(object):
         models (dict): A dictionary of models for each line.
         """
 
-        return model_gen.generate_model_per_line(self, line, param_set)
+        return model_gen.generate_composite_model_per_line(self, line, param_set)
 
     
     # -------------------Cost functions--------------------

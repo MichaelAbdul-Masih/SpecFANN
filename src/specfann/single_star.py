@@ -32,6 +32,7 @@ class single_star(object):
         self.parameters.o = self.parameters.parameter('o', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{O}$')
         self.parameters.si = self.parameters.parameter('si', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{Si}$')
         self.parameters.vrot = self.parameters.parameter('vrot', 0, bounds=[0, 500], latex_string=r'$v \sin i$', unit=r'km s$^{-1}$')
+        self.parameters.vmacro = self.parameters.parameter('vmacro', 0, bounds=[0, 500], latex_string=r'$v_\mathrm{macro}$', unit=r'km s$^{-1}$')
         self.parameters.gamma = self.parameters.parameter('gamma', 0, bounds=[-500, 500], latex_string=r'$\gamma$', unit=r'km s$^{-1}$')
 
         if bundle_path is None:

@@ -13,25 +13,13 @@ class parameters(object):
     Class to hold the parameters for the model
     """
 
-    def __init__(self, vmacro = 0, inst_res = 10000):
+    def __init__(self, inst_res = 10000):
         """
         Initialize the parameters object.
         Parameters:
-        teff (float): Effective temperature in K.
-        logg (float): Log of the surface gravity.
-        r (float): Radius in solar radii.
-        he (float): Helium abundance. (N_He/N_H)
-        c (float): Carbon abundance. (log(N_x/H_H)+12)
-        n (float): Nitrogen abundance. (log(N_x/H_H)+12)
-        o (float): Oxygen abundance. (log(N_x/H_H)+12)
-        si (float): Silicon abundance. (log(N_x/H_H)+12)
-        vrot (float): Rotational velocity in km/s.
-        vmacro (float): Macroturbulent velocity in km/s.
         inst_res (float): Instrumental resolving power (R = lambda/delta_lambda).
-        gamma (float): Systemic radial velocity in km/s.
         """
 
-        self.vmacro = self.parameter('vmacro', vmacro, bounds=[0, 500], latex_string=r'$v_\mathrm{macro}$', unit=r'km s$^{-1}$')
         self.inst_res = self.parameter('inst_res', inst_res, bounds=None, fixed=True, latex_string=r'$\mathcal{R}$')
         self.logf = self.parameter('logf', 0.0, bounds=[-10, 10], fixed=True, hidden=True, latex_string=r'$\log f$')  # log of the variance scaling factor
 
@@ -44,6 +32,41 @@ class parameters(object):
             if isinstance(param, self.parameter):
                 if not param._hidden or show_hidden:
                     print(f"{param.name}: {param.value} (fixed: {param.fixed}, bounds: {param.bounds})")
+    
+    def constrain(self, param_to_constrain, param_to_release):
+        """
+        Constrain one parameter to allow for fitting with a related parameter.
+        Parameters:
+        param_to_constrain: The parameter object to constrain.
+        param_to_release: The parameter object to release.
+        """
+        if param_to_release.name not in param_to_constrain._related_params:
+            raise ValueError(f"Parameter {param_to_release.name} is not related to {param_to_constrain.name}.")
+        param_to_constrain._constrained = True
+        param_to_release._constrained = False
+    
+    def _link_parameters(self, param1, param2):
+        """
+        Link two parameters together so that they are related.
+        Parameters:
+        param1: The first parameter object.
+        param2: The second parameter object.
+        """
+        if param2.name not in param1._related_params:
+            param1._related_params.append(param2.name)
+        if param1.name not in param2._related_params:
+            param2._related_params.append(param1.name)
+
+    def _link_parameter_group(self, param_list):
+        """
+        Link multiple parameters together so that they are related.
+        Parameters:
+        param_list: A list of parameter objects to link.
+        """
+        for i in range(len(param_list)):
+            for j in range(i + 1, len(param_list)):
+                self._link_parameters([param_list[i], param_list[j]])
+
 
     class parameter(object):
         """
@@ -68,6 +91,8 @@ class parameters(object):
             self.latex_string = latex_string
             self.unit = unit
             self._hidden = hidden
+            self._constrained = False
+            self._related_params = []
 
         def fix(self, value = None):
             """
@@ -92,6 +117,8 @@ class parameters(object):
             bounds (list): A list containing the lower and upper bounds for the parameter.
             """
             self.bounds = bounds
+        
+
 
 
 

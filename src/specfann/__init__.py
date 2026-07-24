@@ -44,3 +44,4 @@ from .io_functions import open_project, install_bundle, list_available_bundles
 # from .specfann import *
 
 from .single_star import single_star
+from .composite import composite

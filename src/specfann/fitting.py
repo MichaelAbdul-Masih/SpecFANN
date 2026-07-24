@@ -30,9 +30,10 @@ def interp_model_lines_to_observed(observed_wavelength, model_wavelengths, model
     interpolated_fluxes (array-like): The interpolated fluxes at the observed wavelengths.
     """
 
-    interpolated_fluxes = []
+    # interpolated_fluxes = []
+    interpolated_fluxes = np.empty((len(model_fluxes), len(observed_wavelength)))
     for i in range(len(model_fluxes)):
-        interpolated_fluxes.append(np.interp(observed_wavelength, model_wavelengths[i], model_fluxes[i], left=1.0, right=1.0))
+        interpolated_fluxes[i] = np.interp(observed_wavelength, model_wavelengths[i], model_fluxes[i], left=1.0, right=1.0)
 
     return np.array(interpolated_fluxes)
 
