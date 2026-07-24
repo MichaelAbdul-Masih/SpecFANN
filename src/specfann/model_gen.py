@@ -133,7 +133,10 @@ def generate_model(obj, param_set):
     models = {}
     for line in obj.line_list.keys():
         # Generate the model for each line
-        wavelengths, fluxes = generate_model_per_line(obj, line, param_set)
+        if type(obj).__name__ == 'single_star':
+            wavelengths, fluxes = generate_model_per_line(obj, line, param_set)
+        elif type(obj).__name__ == 'composite':
+            wavelengths, fluxes = generate_composite_model_per_line(obj, line, param_set)
         models[line] = {'wavelengths': wavelengths, 'fluxes': fluxes}
 
     return models
@@ -159,7 +162,7 @@ def generate_model_per_line(obj, line, param_set):
         # Use the neural network to predict the fluxes for the line
         model_fluxes = obj.sbf.predict_fluxes_from_nn(obj.parameters, obj.line_list, line, param_set)
         # Broaden the lines
-        broadened_wavelength, broadened_fluxes = broaden_lines(obj, line, model_fluxes, param_set[:, vrot_ind], param_set[:, vmacro_ind], param_set[:, inst_res_ind])
+        broadened_wavelength, broadened_fluxes = broaden_lines(obj.line_list[line].wavelength, model_fluxes, param_set[:, vrot_ind], param_set[:, vmacro_ind], param_set[:, inst_res_ind])
     else:
         # Use the neural network to predict the fluxes for the line and apply broadening
         broadened_wavelength, broadened_fluxes = obj.sbf.predict_fluxes_from_nn(obj.parameters, obj.line_list, line, param_set)
@@ -170,12 +173,61 @@ def generate_model_per_line(obj, line, param_set):
     return shifted_wavelengths, broadened_fluxes
 
 
-def broaden_lines(obj, line, fluxes, vrot, vmacro, inst_res):
+def generate_composite_model_per_line(obj, line, param_set):
+    """
+    Generate a model based on the provided parameters.
+
+    Parameters:
+    param_set (array-like): The parameters for the model.
+
+    Returns:
+    models (dict): A dictionary of models for each line.
+    """
+
+    vrot1_ind = list(obj.parameters.__dict__.keys()).index('vrot_1')
+    vrot2_ind = list(obj.parameters.__dict__.keys()).index('vrot_2')
+    vmacro1_ind = list(obj.parameters.__dict__.keys()).index('vmacro_1')
+    vmacro2_ind = list(obj.parameters.__dict__.keys()).index('vmacro_2')
+    inst_res_ind = list(obj.parameters.__dict__.keys()).index('inst_res')
+    rv1_ind = list(obj.parameters.__dict__.keys()).index('rv_1')
+    delta_rv_ind = list(obj.parameters.__dict__.keys()).index('delta_rv')
+    lr1_ind = list(obj.parameters.__dict__.keys()).index('lr_1')
+
+    rv2 = param_set[:, rv1_ind] + param_set[:, delta_rv_ind]
+
+    if obj.sbf.use_specfann_broadening:
+        # Use the neural network to predict the fluxes for the line
+        model_fluxes_1 = obj.sbf.predict_fluxes_from_nn(obj.parameters, obj.line_list, line, param_set, suffix='_1')
+        model_fluxes_2 = obj.sbf.predict_fluxes_from_nn(obj.parameters, obj.line_list, line, param_set, suffix='_2')
+
+        # Broaden the lines
+        broadened_wavelength_1, broadened_fluxes_1 = broaden_lines(obj.line_list[line].wavelength, model_fluxes_1, param_set[:, vrot1_ind], param_set[:, vmacro1_ind], inst_res=None)
+        broadened_wavelength_2, broadened_fluxes_2 = broaden_lines(obj.line_list[line].wavelength, model_fluxes_2, param_set[:, vrot2_ind], param_set[:, vmacro2_ind], inst_res=None)
+
+        # combine the broadened lines
+        combined_wavelength, combined_fluxes = combine_binary_lines(broadened_wavelength_1, broadened_fluxes_1, broadened_wavelength_2, broadened_fluxes_2, param_set[:, rv1_ind], rv2, param_set[:, lr1_ind])
+
+        # applly instrumental broadening to the combined line
+        broadened_wavelength, broadened_fluxes = inst_broadening_vectorized(combined_wavelength, combined_fluxes, param_set[:, inst_res_ind])
+
+        return broadened_wavelength, broadened_fluxes
+
+    else:
+        # Use the neural network to predict the fluxes for the line and apply broadening
+        broadened_wavelength_1, broadened_fluxes_1 = obj.sbf.predict_fluxes_from_nn(obj.parameters, obj.line_list, line, param_set, suffix='_1')
+        broadened_wavelength_2, broadened_fluxes_2 = obj.sbf.predict_fluxes_from_nn(obj.parameters, obj.line_list, line, param_set, suffix='_2')
+        # combine the broadened lines
+        combined_wavelength, combined_fluxes = combine_binary_lines(broadened_wavelength_1, broadened_fluxes_1, broadened_wavelength_2, broadened_fluxes_2, param_set[:, rv1_ind], rv2, param_set[:, lr1_ind])
+
+        return combined_wavelength, combined_fluxes
+
+
+def broaden_lines(wavelength, fluxes, vrot, vmacro, inst_res):
     """
     Broaden the spectral lines using rotational broadening.
 
     Parameters:
-    line (str): The name of the line to be broadened.
+    wavelength (array-like): The wavelength array of the line to be broadened.
     fluxes (array-like): The flux values corresponding to the line.
     vrot (float): The rotational velocity to apply for broadening.
     vmacro (float): The macroturbulent velocity to apply for broadening.
@@ -186,7 +238,6 @@ def broaden_lines(obj, line, fluxes, vrot, vmacro, inst_res):
     broadened_fluxes (list of array-like): The broadened flux arrays for each input flux.
     """
 
-    wavelength = obj.line_list[line].wavelength
     new_wavelength = np.arange(wavelength[0], wavelength[-1], 0.01)
     unbroadened_fluxes = si.interp1d(wavelength, fluxes, bounds_error=False, fill_value=(1.0,1.0))(new_wavelength)
 
@@ -209,6 +260,43 @@ def dopler_shift_lines(wavelengths, rv):
 
     c = 299792.458
     return wavelengths*c/(c-rv[:, None])
+
+
+def combine_binary_lines(wavelengths_1, fluxes_1, wavelengths_2, fluxes_2, rv_1, rv_2, lr1=0.5):
+    """
+    Combine the fluxes of two binary components.
+
+    Parameters:
+    wavelengths_1 (array-like): The wavelengths of the first component.
+    fluxes_1 (array-like): The fluxes of the first component.
+    wavelengths_2 (array-like): The wavelengths of the second component.
+    fluxes_2 (array-like): The fluxes of the second component.
+    rv_1 (array-like): The radial velocity of the first component in km/s.
+    rv_2 (array-like): The radial velocity of the second component in km/s.
+    lr1 (array-like): The light ratio of the first component.
+
+    Returns:
+    combined_fluxes (array-like): The combined fluxes of the two components.
+    """
+
+    shifted_wavelengths_1 = dopler_shift_lines(wavelengths_1, rv_1)
+    shifted_wavelengths_2 = dopler_shift_lines(wavelengths_2, rv_2)
+    wavelengths = np.arange(min(shifted_wavelengths_1.min(), shifted_wavelengths_2.min()), max(shifted_wavelengths_1.max(), shifted_wavelengths_2.max()), 0.01)
+
+    scaled_fluxes_1 = (fluxes_1 - 1.0) * lr1[:, None] + 1.0
+    scaled_fluxes_2 = (fluxes_2 - 1.0) * (1.0 - lr1[:, None]) + 1.0
+
+    # f1 = si.interp1d(shifted_wavelengths_1, scaled_fluxes_1, bounds_error=False, fill_value=(1.0, 1.0))
+    # f2 = si.interp1d(shifted_wavelengths_2, scaled_fluxes_2, bounds_error=False, fill_value=(1.0, 1.0))
+    interp_flux1 = np.empty((len(shifted_wavelengths_1), len(wavelengths)))
+    interp_flux2 = np.empty((len(shifted_wavelengths_2), len(wavelengths)))
+    for i in range(len(interp_flux1)):
+        interp_flux1[i] = np.interp(wavelengths, shifted_wavelengths_1[i], scaled_fluxes_1[i], left=1.0, right=1.0)
+        interp_flux2[i] = np.interp(wavelengths, shifted_wavelengths_2[i], scaled_fluxes_2[i], left=1.0, right=1.0)
+
+    combined_fluxes = interp_flux1 * interp_flux2
+
+    return wavelengths, combined_fluxes
 
 
 def parse_parameter_set(self, model_args, free_parameters=None):
