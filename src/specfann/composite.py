@@ -158,6 +158,20 @@ class composite(object):
 
     # -------------------Model Generation functions--------------------
 
+    def generate_synthetic_spectra(obj, param_set, use_considered_wavelengths=False):
+        """
+        Generate synthetic spectra based on the provided parameters.
+
+        Parameters:
+        param_set (array-like): The parameters for the model.
+        use_considered_wavelengths (bool): Whether to use the considered wavelengths for interpolation.
+
+        Returns:
+        synthetic_spectra (array-like): The synthetic spectra for each set of parameters.
+        """
+
+        return model_gen.generate_synthetic_spectra(obj, param_set, use_considered_wavelengths)
+
 
     def generate_model(self, param_set):
         """
@@ -173,7 +187,7 @@ class composite(object):
         return model_gen.generate_model(self, param_set)
     
 
-    def generate_model_per_line(self, line, param_set):
+    def generate_model_per_line(self, line, param_set, observed_wavelength_range=None):
         """
         Generate a model based on the provided parameters.
 
@@ -184,7 +198,7 @@ class composite(object):
         models (dict): A dictionary of models for each line.
         """
 
-        return model_gen.generate_composite_model_per_line(self, line, param_set)
+        return model_gen.generate_composite_model_per_line(self, line, param_set, observed_wavelength_range)
 
     
     # -------------------Cost functions--------------------
@@ -224,6 +238,35 @@ class composite(object):
                 log_likelihoods += fitting.calc_log_likelihoods(self.observed_flux[obs_inds], self.observed_error[obs_inds], interpolated_fluxes)
 
         return log_likelihoods
+
+
+    def log_likelihood_2(self, param_set, fuzz=False):
+        """
+        Calculate the log likelihood of the model given the observed data.
+
+        Parameters:
+        param_set (array-like): The full parameter set including free and fixed parameters.
+
+        Returns:
+        log_likelihoods (array-like): The log likelihoods for each model.
+        """
+
+        param_set = np.array(param_set, ndmin=2)
+        self.n_evaluations += len(param_set)
+
+        synthetic_wavelengths, synthetic_fluxes = self.generate_synthetic_spectra(param_set, use_considered_wavelengths=True)
+
+        # Calculate the log likelihood
+        if fuzz:
+            logf_ind = list(self.parameters.__dict__.keys()).index('logf')
+            logf = param_set[:, logf_ind]
+            error = np.sqrt(self._considered_error **2 + np.array(10**logf, ndmin=2).T * synthetic_fluxes**2)
+            log_likelihoods = fitting.calc_log_likelihoods_with_fuzz(self._considered_fluxes, error, synthetic_fluxes)
+        else:
+            log_likelihoods = fitting.calc_log_likelihoods(self._considered_fluxes, self._considered_error, synthetic_fluxes)
+
+        return log_likelihoods
+
 
 
     def log_prior(self, param_set):
