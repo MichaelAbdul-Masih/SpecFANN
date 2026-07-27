@@ -38,6 +38,43 @@ def interp_model_lines_to_observed(observed_wavelength, model_wavelengths, model
     return np.array(interpolated_fluxes)
 
 
+def calc_obs_inds_from_bounds(observed_wavelength, line_list):
+    """
+    Calculate the indices of the observed wavelengths that fall within the bounds of the lines to be fitted.
+
+    Parameters:
+    observed_wavelength (array-like): The observed wavelength array.
+    line_list (dict): A dictionary of line_to_fit objects.
+
+    Returns:
+    obs_inds_combined (list): A list of indices for the observed wavelengths that fall within the bounds of the lines to be fitted.
+    obs_inds_dict (dict): A dictionary mapping each line to its corresponding indices in the cut observed wavelength array.
+    """
+
+    obs_inds_all = []
+    for line in line_list.keys():
+        fit_range = line_list[line].fit_range
+        obs_inds = np.where((observed_wavelength >= fit_range[0]) & (observed_wavelength <= fit_range[1]))[0]
+        obs_inds_all.append(obs_inds)
+
+    obs_inds_combined = list(set(np.concatenate(obs_inds_all)))
+    obs_inds_combined.sort()
+
+    obs_inds_dict = {}
+    failed = []
+    for i, line in enumerate(line_list.keys()):
+        fit_range = line_list[line].fit_range
+        obs_inds = np.where((observed_wavelength[obs_inds_combined] >= fit_range[0]) & (observed_wavelength[obs_inds_combined] <= fit_range[1]))[0]
+        obs_inds_dict[line] = obs_inds
+        if obs_inds.size == 0:
+            failed.append(line)
+
+    if len(failed) > 0:
+        raise ValueError(f"The following lines fall outside of the observed wavelength range: {failed}")
+
+    return obs_inds_combined, obs_inds_dict
+
+
 
 # -------------------Cost functions--------------------
 
@@ -69,6 +106,142 @@ def calc_chi_square(data, error, model):
     return chi_squares
 
 
+def log_likelihood_line(obj, param_set, fuzz=False):
+    """
+    Calculate the log likelihood of the model given the observed data.
+
+    Parameters:
+    param_set (array-like): The full parameter set including free and fixed parameters.
+
+    Returns:
+    log_likelihoods (array-like): The log likelihoods for each model.
+    """
+
+    param_set = np.array(param_set, ndmin=2)
+    obj.n_evaluations += len(param_set)
+
+    log_likelihoods = np.zeros(len(param_set))
+    for line in obj.line_list.keys():
+        # Get the model wavelengths and fluxes
+        model_wavelengths, model_fluxes = obj.generate_model_per_line(line, param_set)
+
+        # Interpolate the model lines to the observed wavelengths
+        obs_inds = np.where((obj.observed_wavelength >= obj.line_list[line].fit_range[0]) & (obj.observed_wavelength <= obj.line_list[line].fit_range[1]))[0]
+        obs_wavelength = obj.observed_wavelength[obs_inds]
+        interpolated_fluxes = interp_model_lines_to_observed(obs_wavelength, model_wavelengths, model_fluxes)
+
+        # Calculate the log likelihood
+        if fuzz:
+            logf_ind = list(obj.parameters.__dict__.keys()).index('logf')
+            logf = param_set[:, logf_ind]
+            error = np.sqrt(obj.observed_error[obs_inds] **2 + np.array(10**logf, ndmin=2).T * interpolated_fluxes**2)
+            log_likelihoods += calc_log_likelihoods_with_fuzz(obj.observed_flux[obs_inds], error, interpolated_fluxes)
+        else:
+            log_likelihoods += calc_log_likelihoods(obj.observed_flux[obs_inds], obj.observed_error[obs_inds], interpolated_fluxes)
+
+    return log_likelihoods
+
+
+def log_likelihood_spectrum(obj, param_set, fuzz=False):
+    """
+    Calculate the log likelihood of the model given the observed data.
+
+    Parameters:
+    param_set (array-like): The full parameter set including free and fixed parameters.
+
+    Returns:
+    log_likelihoods (array-like): The log likelihoods for each model.
+    """
+
+    param_set = np.array(param_set, ndmin=2)
+    obj.n_evaluations += len(param_set)
+
+    synthetic_wavelengths, synthetic_fluxes = obj.generate_synthetic_spectra(param_set, use_considered_wavelengths=True)
+
+    # Calculate the log likelihood
+    if fuzz:
+        logf_ind = list(obj.parameters.__dict__.keys()).index('logf')
+        logf = param_set[:, logf_ind]
+        error = np.sqrt(obj._considered_error **2 + np.array(10**logf, ndmin=2).T * synthetic_fluxes**2)
+        log_likelihoods = calc_log_likelihoods_with_fuzz(obj._considered_fluxes, error, synthetic_fluxes)
+    else:
+        log_likelihoods = calc_log_likelihoods(obj._considered_fluxes, obj._considered_error, synthetic_fluxes)
+
+    return log_likelihoods
+
+
+def reduced_chi_square_line(obj, model_args, fuzz=False):
+    """
+    Calculate the reduced chi-squared statistic for the model parameters.
+
+    Parameters:
+    model_args (array-like): The full parameter set including free and fixed parameters.
+    fuzz (bool): Whether to include fuzz in the likelihood calculation.
+
+    Returns:
+    chi_squared (float): The chi-squared statistic.
+    """
+
+    param_set = model_gen.parse_parameter_set(obj, model_args)
+    param_set = np.array(param_set, ndmin=2)
+    obj.n_evaluations += len(param_set)
+
+    chi_squares = np.zeros(len(param_set))
+    reduced_chi_squares = np.zeros(len(param_set))
+    for line in obj.line_list.keys():
+        # Get the model wavelengths and fluxes
+        model_wavelengths, model_fluxes = obj.generate_model_per_line(line, param_set)
+
+        # Interpolate the model lines to the observed wavelengths
+        obs_inds = np.where((obj.observed_wavelength >= obj.line_list[line].fit_range[0]) & (obj.observed_wavelength <= obj.line_list[line].fit_range[1]))[0]
+        obs_wavelength = obj.observed_wavelength[obs_inds]
+        interpolated_fluxes = interp_model_lines_to_observed(obs_wavelength, model_wavelengths, model_fluxes)
+
+        # Calculate the log likelihood
+        if fuzz:
+            logf_ind = list(obj.parameters.__dict__.keys()).index('logf')
+            logf = param_set[:, logf_ind]
+            error = np.sqrt(obj.observed_error[obs_inds] **2 + np.array(10**logf, ndmin=2).T * interpolated_fluxes**2)
+            chi_squares += calc_chi_square(obj.observed_flux[obs_inds], error, interpolated_fluxes)
+        else:
+            chi_squares += calc_chi_square(obj.observed_flux[obs_inds], obj.observed_error[obs_inds], interpolated_fluxes)
+
+        reduced_chi_squares += chi_squares / (len(obs_inds) - len(obj.free_parameters))
+
+    return reduced_chi_squares
+
+
+def reduced_chi_square_spectrum(obj, model_args, fuzz=False):
+    """
+    Calculate the reduced chi-squared statistic for the model parameters.
+
+    Parameters:
+    model_args (array-like): The full parameter set including free and fixed parameters.
+    fuzz (bool): Whether to include fuzz in the likelihood calculation.
+
+    Returns:
+    chi_squared (float): The chi-squared statistic.
+    """
+
+    param_set = model_gen.parse_parameter_set(obj, model_args)
+    param_set = np.array(param_set, ndmin=2)
+    obj.n_evaluations += len(param_set)
+
+    synthetic_wavelengths, synthetic_fluxes = obj.generate_synthetic_spectra(param_set, use_considered_wavelengths=True)
+
+    # Calculate the log likelihood
+    if fuzz:
+        logf_ind = list(obj.parameters.__dict__.keys()).index('logf')
+        logf = param_set[:, logf_ind]
+        error = np.sqrt(obj._considered_error **2 + np.array(10**logf, ndmin=2).T * synthetic_fluxes**2)
+        chi_squares = calc_chi_square(obj._considered_fluxes, error, synthetic_fluxes)
+    else:
+        chi_squares = calc_chi_square(obj._considered_fluxes, obj._considered_error, synthetic_fluxes)
+
+    reduced_chi_squares = chi_squares / (len(obj._considered_wavelengths) - len(obj.free_parameters))
+
+    return reduced_chi_squares
+
 
 # -------------------MCMC functions--------------------
 
@@ -98,6 +271,10 @@ def run_mcmc(obj, initial_positions=None, n_walkers=None, n_steps=None, fuzz=Fal
     obj.free_parameters = [param for param in obj.parameters.__dict__ if not obj.parameters.__dict__[param].fixed]
     obj.mcmc_free_parameters = obj.free_parameters.copy()
 
+    obj._obs_inds, obj._obs_inds_dict = calc_obs_inds_from_bounds(obj.observed_wavelength, obj.line_list)
+    obj._considered_wavelengths = obj.observed_wavelength[obj._obs_inds]
+    obj._considered_fluxes = obj.observed_flux[obj._obs_inds]
+    obj._considered_error = obj.observed_error[obj._obs_inds]
 
     # Initialize the walkers if not passed to the function
     if initial_positions is None:
@@ -279,6 +456,11 @@ def run_nested_sampling(obj, fuzz=False, return_result=False, step_sampler=None,
     obj.free_parameters = [param for param in obj.parameters.__dict__ if not obj.parameters.__dict__[param].fixed]
     obj.nested_sampling_free_parameters = obj.free_parameters.copy()
 
+    obj._obs_inds, obj._obs_inds_dict = calc_obs_inds_from_bounds(obj.observed_wavelength, obj.line_list)
+    obj._considered_wavelengths = obj.observed_wavelength[obj._obs_inds]
+    obj._considered_fluxes = obj.observed_flux[obj._obs_inds]
+    obj._considered_error = obj.observed_error[obj._obs_inds]
+
     ndim = len(obj.free_parameters)
     param_names = list(obj.free_parameters)
     bounds = [obj.parameters.__dict__[p].bounds for p in obj.free_parameters]
@@ -423,6 +605,11 @@ def run_Nelder_Mead(obj, initial_guess=None, return_result = False):
 
     if initial_guess is None:
         initial_guess = [obj.parameters.__dict__[param].value for param in obj.free_parameters]
+
+    obj._obs_inds, obj._obs_inds_dict = calc_obs_inds_from_bounds(obj.observed_wavelength, obj.line_list)
+    obj._considered_wavelengths = obj.observed_wavelength[obj._obs_inds]
+    obj._considered_fluxes = obj.observed_flux[obj._obs_inds]
+    obj._considered_error = obj.observed_error[obj._obs_inds]
 
     nll = lambda *args: -obj.log_probability(*args)[0]
 
@@ -571,6 +758,11 @@ def run_GA(obj, n_generations=300, population_size=50, return_result=False):
     obj.parameters.logf.fix(0.0)
     # reinitialize the free parameters array to catch any changed parameters
     obj.free_parameters = [param for param in obj.parameters.__dict__ if not obj.parameters.__dict__[param].fixed]
+
+    obj._obs_inds, obj._obs_inds_dict = calc_obs_inds_from_bounds(obj.observed_wavelength, obj.line_list)
+    obj._considered_wavelengths = obj.observed_wavelength[obj._obs_inds]
+    obj._considered_fluxes = obj.observed_flux[obj._obs_inds]
+    obj._considered_error = obj.observed_error[obj._obs_inds]
 
     # translate the parameters to a format suitable for the genetic algorithm
     ga_params = _translate_params_to_GA(obj)
