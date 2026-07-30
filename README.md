@@ -1,4 +1,4 @@
-# SpecFANN 1.0.0
+# SpecFANN 1.0.1
 
 Introduction
 ------------
@@ -7,7 +7,7 @@ SpecFANN (Spectroscopic Fitting via Artificial Neural Networks) is a deep learni
 
 Installation
 ------------
-There are several ways to install SpecFANN, depending on your specific needs.
+There are several ways to install SpecFANN, depending on your specific needs.  Please note that as of now, due to certain package dependencies, SpecFANN will only work on Python versions >= 3.10 and < 3.14
 
 ### pip
 The easiest way to install SpecFANN is via pip:
@@ -58,6 +58,10 @@ We've prepared a jupyter notebook that shows the SpecFANN workflow, and what cus
 
 Change Log
 ---------------
+
+### 1.0.1
+
+* Minor bugfixes related to dependencies: ipykernel was added as a dependency and Python version requirements were updated. 
 
 ### 1.0.0 - official release of SpecFANN v1.0
 
