@@ -146,6 +146,20 @@ class single_star(object):
 
     # -------------------Model Generation functions--------------------
 
+    def generate_synthetic_spectra(obj, param_set, use_considered_wavelengths=False):
+        """
+        Generate synthetic spectra based on the provided parameters.
+
+        Parameters:
+        param_set (array-like): The parameters for the model.
+        use_considered_wavelengths (bool): Whether to use the considered wavelengths for interpolation.
+
+        Returns:
+        synthetic_spectra (array-like): The synthetic spectra for each set of parameters.
+        """
+
+        return model_gen.generate_synthetic_spectra(obj, param_set, use_considered_wavelengths)
+
 
     def generate_model(self, param_set):
         """
@@ -161,7 +175,7 @@ class single_star(object):
         return model_gen.generate_model(self, param_set)
     
 
-    def generate_model_per_line(self, line, param_set):
+    def generate_model_per_line(self, line, param_set, observed_wavelength_range=None):
         """
         Generate a model based on the provided parameters.
 
@@ -172,13 +186,27 @@ class single_star(object):
         models (dict): A dictionary of models for each line.
         """
 
-        return model_gen.generate_model_per_line(self, line, param_set)
+        return model_gen.generate_model_per_line(self, line, param_set, observed_wavelength_range)
 
     
     # -------------------Cost functions--------------------
 
 
     def log_likelihood(self, param_set, fuzz=False):
+        """
+        Calculate the log likelihood of the model given the observed data.
+
+        Parameters:
+        param_set (array-like): The full parameter set including free and fixed parameters.
+
+        Returns:
+        log_likelihoods (array-like): The log likelihoods for each model.
+        """
+
+        return fitting.log_likelihood_spectrum(self, param_set, fuzz=fuzz)
+
+
+    def log_likelihood_1(self, param_set, fuzz=False):
         """
         Calculate the log likelihood of the model given the observed data.
 
@@ -262,6 +290,21 @@ class single_star(object):
         chi_squared (float): The chi-squared statistic.
         """
 
+        return fitting.reduced_chi_square_spectrum(self, model_args, fuzz=fuzz)
+
+
+    def reduced_chi_square_1(self, model_args, fuzz=False):
+        """
+        Calculate the reduced chi-squared statistic for the model parameters.
+
+        Parameters:
+        model_args (array-like): The full parameter set including free and fixed parameters.
+        fuzz (bool): Whether to include fuzz in the likelihood calculation.
+
+        Returns:
+        chi_squared (float): The chi-squared statistic.
+        """
+
         param_set = model_gen.parse_parameter_set(self, model_args)
         param_set = np.array(param_set, ndmin=2)
         self.n_evaluations += len(param_set)
@@ -289,6 +332,39 @@ class single_star(object):
             reduced_chi_squares += chi_squares / (len(obs_inds) - len(self.free_parameters))
 
         return reduced_chi_squares
+
+
+    def reduced_chi_square_2(self, model_args, fuzz=False):
+        """
+        Calculate the reduced chi-squared statistic for the model parameters.
+
+        Parameters:
+        model_args (array-like): The full parameter set including free and fixed parameters.
+        fuzz (bool): Whether to include fuzz in the likelihood calculation.
+
+        Returns:
+        chi_squared (float): The chi-squared statistic.
+        """
+
+        param_set = model_gen.parse_parameter_set(self, model_args)
+        param_set = np.array(param_set, ndmin=2)
+        self.n_evaluations += len(param_set)
+
+        synthetic_wavelengths, synthetic_fluxes = self.generate_synthetic_spectra(param_set, use_considered_wavelengths=True)
+
+        # Calculate the log likelihood
+        if fuzz:
+            logf_ind = list(self.parameters.__dict__.keys()).index('logf')
+            logf = param_set[:, logf_ind]
+            error = np.sqrt(self._considered_error **2 + np.array(10**logf, ndmin=2).T * synthetic_fluxes**2)
+            chi_squares = fitting.calc_chi_square(self._considered_fluxes, error, synthetic_fluxes)
+        else:
+            chi_squares = fitting.calc_chi_square(self._considered_fluxes, self._considered_error, synthetic_fluxes)
+
+        reduced_chi_squares = chi_squares / (len(self._considered_wavelengths) - len(self.free_parameters))
+
+        return reduced_chi_squares
+
 
 
     # -------------------MCMC functions--------------------
@@ -358,19 +434,28 @@ class single_star(object):
         fig, axs = plt.subplots(subplots_dict[len(self.line_list)][0], subplots_dict[len(self.line_list)][1], figsize=(subplots_dict[len(self.line_list)][1]*4, subplots_dict[len(self.line_list)][0]*3))
         axs = axs.ravel()
 
+        model_wavelengths, model_fluxes = self.generate_synthetic_spectra(param_set, use_considered_wavelengths=True)
+        model_mean = np.array(model_fluxes).mean(axis=0)
+        model_std = np.array(model_fluxes).std(axis=0)
+
         for i, line in enumerate(self.line_list.keys()):
-            model_wavelengths, model_fluxes = self.generate_model_per_line(line, np.array(param_set, ndmin=2))
+            # model_wavelengths, model_fluxes = self.generate_model_per_line(line, np.array(param_set, ndmin=2))
 
             obs_inds = np.where((self.observed_wavelength >= self.line_list[line].fit_range[0]) & (self.observed_wavelength <= self.line_list[line].fit_range[1]))[0]
             obs_wavelength = self.observed_wavelength[obs_inds]
-            interpolated_fluxes = fitting.interp_model_lines_to_observed(obs_wavelength, model_wavelengths, model_fluxes)
+            # interpolated_fluxes = fitting.interp_model_lines_to_observed(obs_wavelength, model_wavelengths, model_fluxes)
 
-            model_mean = np.array(interpolated_fluxes).mean(axis=0)
-            model_std = np.array(interpolated_fluxes).std(axis=0)
+            # model_mean = np.array(interpolated_fluxes).mean(axis=0)
+            # model_std = np.array(interpolated_fluxes).std(axis=0)
+
+            line_model_wavelengths = model_wavelengths[self._obs_inds_dict[line]]
+            line_model_fluxes = model_fluxes[:, self._obs_inds_dict[line]]
+            line_model_mean = model_mean[self._obs_inds_dict[line]]
+            line_model_std = model_std[self._obs_inds_dict[line]]
 
             axs[i].plot(obs_wavelength, self.observed_flux[obs_inds], 'k-', label='Observed')
-            axs[i].plot(obs_wavelength, model_mean, 'r-', label='Best Fit')
-            axs[i].fill_between(obs_wavelength, model_mean-model_std, model_mean+model_std, color='lightcoral', alpha=0.8, label='1-sigma')
+            axs[i].plot(line_model_wavelengths, line_model_mean, 'r-', label='Best Fit')
+            axs[i].fill_between(line_model_wavelengths, line_model_mean-line_model_std, line_model_mean+line_model_std, color='lightcoral', alpha=0.8, label='1-sigma')
             if line_labels:
                 axs[i].text(0.025, 0.025, f'{line}', transform=axs[i].transAxes, fontsize=12, verticalalignment='bottom')
             axs[i].set_xlabel(r'Wavelength ($\mathrm{\AA}$)')
@@ -571,20 +656,30 @@ class single_star(object):
         fig, axs = plt.subplots(subplots_dict[len(self.line_list)][0], subplots_dict[len(self.line_list)][1], figsize=(subplots_dict[len(self.line_list)][1]*4, subplots_dict[len(self.line_list)][0]*3))
         axs = axs.ravel()
 
+        model_wavelengths, model_fluxes = self.generate_synthetic_spectra(param_set, use_considered_wavelengths=True)
+        model_mean = np.array(model_fluxes).mean(axis=0)
+        model_std = np.array(model_fluxes).std(axis=0)
+
         for i, line in enumerate(self.line_list.keys()):
             # Get the model wavelengths and fluxes
-            model_wavelengths, model_fluxes = self.generate_model_per_line(line, np.array(param_set, ndmin=2))
+            # model_wavelengths, model_fluxes = self.generate_model_per_line(line, np.array(param_set, ndmin=2))
 
             obs_inds = np.where((self.observed_wavelength >= self.line_list[line].fit_range[0]) & (self.observed_wavelength <= self.line_list[line].fit_range[1]))[0]
             obs_wavelength = self.observed_wavelength[obs_inds]
-            interpolated_fluxes = fitting.interp_model_lines_to_observed(obs_wavelength, model_wavelengths, model_fluxes)
+            # interpolated_fluxes = fitting.interp_model_lines_to_observed(obs_wavelength, model_wavelengths, model_fluxes)
 
-            model_min = np.array(interpolated_fluxes).min(axis=0)
-            model_max = np.array(interpolated_fluxes).max(axis=0)
+            # model_min = np.array(interpolated_fluxes).min(axis=0)
+            # model_max = np.array(interpolated_fluxes).max(axis=0)
+
+            line_model_wavelengths = model_wavelengths[self._obs_inds_dict[line]]
+            line_model_fluxes = model_fluxes[:, self._obs_inds_dict[line]]
+            line_model_mean = model_mean[self._obs_inds_dict[line]]
+            line_model_std = model_std[self._obs_inds_dict[line]]
+
 
             axs[i].plot(obs_wavelength, self.observed_flux[obs_inds], 'k-', label='Observed')
-            axs[i].plot(obs_wavelength, interpolated_fluxes[-1], 'r-', label='Best Fit')
-            axs[i].fill_between(obs_wavelength, model_min, model_max, color='lightcoral', alpha=0.5, label='1-sigma', zorder=9)
+            axs[i].plot(line_model_wavelengths, line_model_fluxes[-1], 'r-', label='Best Fit')
+            axs[i].fill_between(line_model_wavelengths, line_model_mean - line_model_std, line_model_mean + line_model_std, color='lightcoral', alpha=0.5, label='1-sigma', zorder=9)
             if line_labels:
                 axs[i].text(0.025, 0.025, f'{line}', transform=axs[i].transAxes, fontsize=12, verticalalignment='bottom')
             axs[i].set_xlabel(r'Wavelength ($\mathrm{\AA}$)')
