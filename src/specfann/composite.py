@@ -1,4 +1,5 @@
 import os
+import copy
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -25,26 +26,26 @@ class composite(object):
         self.parameters.teff_1 = self.parameters.parameter('teff_1', 40000, bounds=[15000, 60000], latex_string=r'$T_{eff, 1}$', unit=r'K')
         self.parameters.logg_1 = self.parameters.parameter('logg_1', 4.0, bounds=[2.0, 4.5], latex_string=r'$\log g_1$')
         self.parameters.r_1 = self.parameters.parameter('r_1', 7, bounds=[5, 30], latex_string=r'$R_1$', unit=r'R$_\odot$')
-        self.parameters.he_1 = self.parameters.parameter('he_1', 0.1, bounds=[0.06, 0.3], latex_string=r'$Y_\mathrm{He}_1$')
-        self.parameters.c_1 = self.parameters.parameter('c_1', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{C}_1$')
-        self.parameters.n_1 = self.parameters.parameter('n_1', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{N}_1$')
-        self.parameters.o_1 = self.parameters.parameter('o_1', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{O}_1$')
-        self.parameters.si_1 = self.parameters.parameter('si_1', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{Si}_1$')
+        self.parameters.he_1 = self.parameters.parameter('he_1', 0.1, bounds=[0.06, 0.3], latex_string=r'$Y_{\mathrm{He}, 1}$')
+        self.parameters.c_1 = self.parameters.parameter('c_1', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_{\mathrm{C}, 1}$')
+        self.parameters.n_1 = self.parameters.parameter('n_1', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_{\mathrm{N}, 1}$')
+        self.parameters.o_1 = self.parameters.parameter('o_1', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_{\mathrm{O}, 1}$')
+        self.parameters.si_1 = self.parameters.parameter('si_1', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_{\mathrm{Si}, 1}$')
         self.parameters.vrot_1 = self.parameters.parameter('vrot_1', 0, bounds=[0, 500], latex_string=r'$v \sin i_1$', unit=r'km s$^{-1}$')
-        self.parameters.vmacro_1 = self.parameters.parameter('vmacro_1', 0, bounds=[0, 500], latex_string=r'$v_\mathrm{macro}_1$', unit=r'km s$^{-1}$')
+        self.parameters.vmacro_1 = self.parameters.parameter('vmacro_1', 0, bounds=[0, 500], latex_string=r'$v_\mathrm{macro},1$', unit=r'km s$^{-1}$')
         self.parameters.rv_1 = self.parameters.parameter('rv_1', 0, bounds=[-500, 500], latex_string=r'$rv_1$', unit=r'km s$^{-1}$')
-        self.parameters.lr_1 = self.parameters.parameter('lr_1', 0.5, bounds=[0, 1], latex_string=r'$l_\mathrm{ratio}_1$', unit=r'')
+        self.parameters.lr_1 = self.parameters.parameter('lr_1', 0.5, bounds=[0, 1], latex_string=r'$l_{\mathrm{ratio}, 1}$', unit=r'')
 
         self.parameters.teff_2 = self.parameters.parameter('teff_2', 40000, bounds=[15000, 60000], latex_string=r'$T_{eff, 2}$', unit=r'K')
         self.parameters.logg_2 = self.parameters.parameter('logg_2', 4.0, bounds=[2.0, 4.5], latex_string=r'$\log g_2$')
         self.parameters.r_2 = self.parameters.parameter('r_2', 7, bounds=[5, 30], latex_string=r'$R_2$', unit=r'R$_\odot$')
-        self.parameters.he_2 = self.parameters.parameter('he_2', 0.1, bounds=[0.06, 0.3], latex_string=r'$Y_\mathrm{He}_2$')
-        self.parameters.c_2 = self.parameters.parameter('c_2', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{C}_2$')
-        self.parameters.n_2 = self.parameters.parameter('n_2', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{N}_2$')
-        self.parameters.o_2 = self.parameters.parameter('o_2', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{O}_2$')
-        self.parameters.si_2 = self.parameters.parameter('si_2', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{Si}_2$')
+        self.parameters.he_2 = self.parameters.parameter('he_2', 0.1, bounds=[0.06, 0.3], latex_string=r'$Y_{\mathrm{He}, 2}$')
+        self.parameters.c_2 = self.parameters.parameter('c_2', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_{\mathrm{C}, 2}$')
+        self.parameters.n_2 = self.parameters.parameter('n_2', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_{\mathrm{N}, 2}$')
+        self.parameters.o_2 = self.parameters.parameter('o_2', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_{\mathrm{O}, 2}$')
+        self.parameters.si_2 = self.parameters.parameter('si_2', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_{\mathrm{Si}, 2}$')
         self.parameters.vrot_2 = self.parameters.parameter('vrot_2', 0, bounds=[0, 500], latex_string=r'$v \sin i_2$', unit=r'km s$^{-1}$')
-        self.parameters.vmacro_2 = self.parameters.parameter('vmacro_2', 0, bounds=[0, 500], latex_string=r'$v_\mathrm{macro}_2$', unit=r'km s$^{-1}$')
+        self.parameters.vmacro_2 = self.parameters.parameter('vmacro_2', 0, bounds=[0, 500], latex_string=r'$v_\mathrm{macro},2$', unit=r'km s$^{-1}$')
         self.parameters.delta_rv = self.parameters.parameter('delta_rv', 10, bounds=[0, 1000], latex_string=r'$\Delta rv$', unit=r'km s$^{-1}$')
 
         if bundle_path is None:
@@ -215,58 +216,7 @@ class composite(object):
         log_likelihoods (array-like): The log likelihoods for each model.
         """
 
-        param_set = np.array(param_set, ndmin=2)
-        self.n_evaluations += len(param_set)
-
-        log_likelihoods = np.zeros(len(param_set))
-        for line in self.line_list.keys():
-            # Get the model wavelengths and fluxes
-            model_wavelengths, model_fluxes = self.generate_model_per_line(line, param_set)
-
-            # Interpolate the model lines to the observed wavelengths
-            obs_inds = np.where((self.observed_wavelength >= self.line_list[line].fit_range[0]) & (self.observed_wavelength <= self.line_list[line].fit_range[1]))[0]
-            obs_wavelength = self.observed_wavelength[obs_inds]
-            interpolated_fluxes = fitting.interp_model_lines_to_observed(obs_wavelength, model_wavelengths, model_fluxes)
-
-            # Calculate the log likelihood
-            if fuzz:
-                logf_ind = list(self.parameters.__dict__.keys()).index('logf')
-                logf = param_set[:, logf_ind]
-                error = np.sqrt(self.observed_error[obs_inds] **2 + np.array(10**logf, ndmin=2).T * interpolated_fluxes**2)
-                log_likelihoods += fitting.calc_log_likelihoods_with_fuzz(self.observed_flux[obs_inds], error, interpolated_fluxes)
-            else:
-                log_likelihoods += fitting.calc_log_likelihoods(self.observed_flux[obs_inds], self.observed_error[obs_inds], interpolated_fluxes)
-
-        return log_likelihoods
-
-
-    def log_likelihood_2(self, param_set, fuzz=False):
-        """
-        Calculate the log likelihood of the model given the observed data.
-
-        Parameters:
-        param_set (array-like): The full parameter set including free and fixed parameters.
-
-        Returns:
-        log_likelihoods (array-like): The log likelihoods for each model.
-        """
-
-        param_set = np.array(param_set, ndmin=2)
-        self.n_evaluations += len(param_set)
-
-        synthetic_wavelengths, synthetic_fluxes = self.generate_synthetic_spectra(param_set, use_considered_wavelengths=True)
-
-        # Calculate the log likelihood
-        if fuzz:
-            logf_ind = list(self.parameters.__dict__.keys()).index('logf')
-            logf = param_set[:, logf_ind]
-            error = np.sqrt(self._considered_error **2 + np.array(10**logf, ndmin=2).T * synthetic_fluxes**2)
-            log_likelihoods = fitting.calc_log_likelihoods_with_fuzz(self._considered_fluxes, error, synthetic_fluxes)
-        else:
-            log_likelihoods = fitting.calc_log_likelihoods(self._considered_fluxes, self._considered_error, synthetic_fluxes)
-
-        return log_likelihoods
-
+        return fitting.log_likelihood_spectrum(self, param_set, fuzz=fuzz)
 
 
     def log_prior(self, param_set):
@@ -290,8 +240,8 @@ class composite(object):
                 prior_array += np.where(np.logical_and(param_set[:, param_ind] >= param_obj.bounds[0],
                                                         param_set[:, param_ind] <= param_obj.bounds[1]), 0, -np.inf)
 
-
-        prior_array = self.sbf.update_priors(self.parameters, param_set, prior_array)
+        prior_array = self.sbf.update_priors(self._parameters_1, param_set, prior_array)
+        prior_array = self.sbf.update_priors(self._parameters_2, param_set, prior_array)
 
         return prior_array
 
@@ -317,33 +267,8 @@ class composite(object):
         chi_squared (float): The chi-squared statistic.
         """
 
-        param_set = model_gen.parse_parameter_set(self, model_args)
-        param_set = np.array(param_set, ndmin=2)
-        self.n_evaluations += len(param_set)
+        return fitting.reduced_chi_square_spectrum(self, model_args, fuzz=fuzz)
 
-        chi_squares = np.zeros(len(param_set))
-        reduced_chi_squares = np.zeros(len(param_set))
-        for line in self.line_list.keys():
-            # Get the model wavelengths and fluxes
-            model_wavelengths, model_fluxes = self.generate_model_per_line(line, param_set)
-
-            # Interpolate the model lines to the observed wavelengths
-            obs_inds = np.where((self.observed_wavelength >= self.line_list[line].fit_range[0]) & (self.observed_wavelength <= self.line_list[line].fit_range[1]))[0]
-            obs_wavelength = self.observed_wavelength[obs_inds]
-            interpolated_fluxes = fitting.interp_model_lines_to_observed(obs_wavelength, model_wavelengths, model_fluxes)
-
-            # Calculate the log likelihood
-            if fuzz:
-                logf_ind = list(self.parameters.__dict__.keys()).index('logf')
-                logf = param_set[:, logf_ind]
-                error = np.sqrt(self.observed_error[obs_inds] **2 + np.array(10**logf, ndmin=2).T * interpolated_fluxes**2)
-                chi_squares += fitting.calc_chi_square(self.observed_flux[obs_inds], error, interpolated_fluxes)
-            else:
-                chi_squares += fitting.calc_chi_square(self.observed_flux[obs_inds], self.observed_error[obs_inds], interpolated_fluxes)
-
-            reduced_chi_squares += chi_squares / (len(obs_inds) - len(self.free_parameters))
-
-        return reduced_chi_squares
 
 
     # -------------------MCMC functions--------------------
@@ -358,6 +283,21 @@ class composite(object):
         n_walkers (int): The number of walkers to use in the MCMC simulation.
         n_steps (int): The number of steps to run the MCMC simulation for.
         """
+
+        # create separate parameter objects for each star by removing the _1 and _2 suffixes (this is needed for the prior calculation)
+        params_star1 = copy.deepcopy(self.parameters)
+        star1_keys = [key for key in params_star1.__dict__.keys() if key.endswith('_1')]
+        for key in star1_keys:
+            setattr(params_star1, key[:-2], getattr(params_star1, key))
+            delattr(params_star1, key)
+        self._parameters_1 = params_star1
+
+        params_star2 = copy.deepcopy(self.parameters)
+        star2_keys = [key for key in params_star2.__dict__.keys() if key.endswith('_2')]
+        for key in star2_keys:
+            setattr(params_star2, key[:-2], getattr(params_star2, key))
+            delattr(params_star2, key)
+        self._parameters_2 = params_star2
 
         fitting.run_mcmc(self, initial_positions, n_walkers, n_steps, fuzz, return_sampler)
 
@@ -413,19 +353,21 @@ class composite(object):
         fig, axs = plt.subplots(subplots_dict[len(self.line_list)][0], subplots_dict[len(self.line_list)][1], figsize=(subplots_dict[len(self.line_list)][1]*4, subplots_dict[len(self.line_list)][0]*3))
         axs = axs.ravel()
 
-        for i, line in enumerate(self.line_list.keys()):
-            model_wavelengths, model_fluxes = self.generate_model_per_line(line, np.array(param_set, ndmin=2))
+        model_wavelengths, model_fluxes = self.generate_synthetic_spectra(param_set, use_considered_wavelengths=True)
+        model_mean = np.array(model_fluxes).mean(axis=0)
+        model_std = np.array(model_fluxes).std(axis=0)
 
+        for i, line in enumerate(self.line_list.keys()):
             obs_inds = np.where((self.observed_wavelength >= self.line_list[line].fit_range[0]) & (self.observed_wavelength <= self.line_list[line].fit_range[1]))[0]
             obs_wavelength = self.observed_wavelength[obs_inds]
-            interpolated_fluxes = fitting.interp_model_lines_to_observed(obs_wavelength, model_wavelengths, model_fluxes)
 
-            model_mean = np.array(interpolated_fluxes).mean(axis=0)
-            model_std = np.array(interpolated_fluxes).std(axis=0)
+            line_model_wavelengths = model_wavelengths[self._obs_inds_dict[line]]
+            line_model_mean = model_mean[self._obs_inds_dict[line]]
+            line_model_std = model_std[self._obs_inds_dict[line]]
 
             axs[i].plot(obs_wavelength, self.observed_flux[obs_inds], 'k-', label='Observed')
-            axs[i].plot(obs_wavelength, model_mean, 'r-', label='Best Fit')
-            axs[i].fill_between(obs_wavelength, model_mean-model_std, model_mean+model_std, color='lightcoral', alpha=0.8, label='1-sigma')
+            axs[i].plot(line_model_wavelengths, line_model_mean, 'r-', label='Best Fit')
+            axs[i].fill_between(line_model_wavelengths, line_model_mean-line_model_std, line_model_mean+line_model_std, color='lightcoral', alpha=0.8, label='1-sigma')
             if line_labels:
                 axs[i].text(0.025, 0.025, f'{line}', transform=axs[i].transAxes, fontsize=12, verticalalignment='bottom')
             axs[i].set_xlabel(r'Wavelength ($\mathrm{\AA}$)')
@@ -522,17 +464,21 @@ class composite(object):
         fig, axs = plt.subplots(subplots_dict[len(self.line_list)][0], subplots_dict[len(self.line_list)][1], figsize=(subplots_dict[len(self.line_list)][1]*4, subplots_dict[len(self.line_list)][0]*3))
         axs = axs.ravel()
 
+        model_wavelengths, model_fluxes = self.generate_synthetic_spectra(param_set, use_considered_wavelengths=True)
+        model_mean = np.array(model_fluxes).mean(axis=0)
+        model_std = np.array(model_fluxes).std(axis=0)
+
         for i, line in enumerate(self.line_list.keys()):
-            model_wavelengths, model_fluxes = self.generate_model_per_line(line, np.array(param_set, ndmin=2))
             obs_inds = np.where((self.observed_wavelength >= self.line_list[line].fit_range[0]) & (self.observed_wavelength <= self.line_list[line].fit_range[1]))[0]
             obs_wavelength = self.observed_wavelength[obs_inds]
-            interpolated_fluxes = fitting.interp_model_lines_to_observed(obs_wavelength, model_wavelengths, model_fluxes)
             
-            model_mean = np.array(interpolated_fluxes).mean(axis=0)
-            model_std = np.array(interpolated_fluxes).std(axis=0)
+            line_model_wavelengths = model_wavelengths[self._obs_inds_dict[line]]
+            line_model_mean = model_mean[self._obs_inds_dict[line]]
+            line_model_std = model_std[self._obs_inds_dict[line]]
+
             axs[i].plot(obs_wavelength, self.observed_flux[obs_inds], 'k-', label='Observed')
-            axs[i].plot(obs_wavelength, model_mean, 'r-', label='Best Fit')
-            axs[i].fill_between(obs_wavelength, model_mean - model_std, model_mean + model_std, color='lightcoral', alpha=0.8, label='1-sigma')
+            axs[i].plot(line_model_wavelengths, line_model_mean, 'r-', label='Best Fit')
+            axs[i].fill_between(line_model_wavelengths, line_model_mean - line_model_std, line_model_mean + line_model_std, color='lightcoral', alpha=0.8, label='1-sigma')
             if line_labels:
                 axs[i].text(0.025, 0.025, f'{line}', transform=axs[i].transAxes, fontsize=12, verticalalignment='bottom')
             axs[i].set_xlabel(r'Wavelength ($\mathrm{\AA}$)')
@@ -626,20 +572,23 @@ class composite(object):
         fig, axs = plt.subplots(subplots_dict[len(self.line_list)][0], subplots_dict[len(self.line_list)][1], figsize=(subplots_dict[len(self.line_list)][1]*4, subplots_dict[len(self.line_list)][0]*3))
         axs = axs.ravel()
 
-        for i, line in enumerate(self.line_list.keys()):
-            # Get the model wavelengths and fluxes
-            model_wavelengths, model_fluxes = self.generate_model_per_line(line, np.array(param_set, ndmin=2))
+        model_wavelengths, model_fluxes = self.generate_synthetic_spectra(param_set, use_considered_wavelengths=True)
+        model_mean = np.array(model_fluxes).mean(axis=0)
+        model_std = np.array(model_fluxes).std(axis=0)
 
+        for i, line in enumerate(self.line_list.keys()):
             obs_inds = np.where((self.observed_wavelength >= self.line_list[line].fit_range[0]) & (self.observed_wavelength <= self.line_list[line].fit_range[1]))[0]
             obs_wavelength = self.observed_wavelength[obs_inds]
-            interpolated_fluxes = fitting.interp_model_lines_to_observed(obs_wavelength, model_wavelengths, model_fluxes)
 
-            model_min = np.array(interpolated_fluxes).min(axis=0)
-            model_max = np.array(interpolated_fluxes).max(axis=0)
+            line_model_wavelengths = model_wavelengths[self._obs_inds_dict[line]]
+            line_model_fluxes = model_fluxes[:, self._obs_inds_dict[line]]
+            line_model_mean = model_mean[self._obs_inds_dict[line]]
+            line_model_std = model_std[self._obs_inds_dict[line]]
+
 
             axs[i].plot(obs_wavelength, self.observed_flux[obs_inds], 'k-', label='Observed')
-            axs[i].plot(obs_wavelength, interpolated_fluxes[-1], 'r-', label='Best Fit')
-            axs[i].fill_between(obs_wavelength, model_min, model_max, color='lightcoral', alpha=0.5, label='1-sigma', zorder=9)
+            axs[i].plot(line_model_wavelengths, line_model_fluxes[-1], 'r-', label='Best Fit')
+            axs[i].fill_between(line_model_wavelengths, line_model_mean - line_model_std, line_model_mean + line_model_std, color='lightcoral', alpha=0.5, label='1-sigma', zorder=9)
             if line_labels:
                 axs[i].text(0.025, 0.025, f'{line}', transform=axs[i].transAxes, fontsize=12, verticalalignment='bottom')
             axs[i].set_xlabel(r'Wavelength ($\mathrm{\AA}$)')
