@@ -379,7 +379,11 @@ def plot_MCMC_results(obj, sampler = None, burnin=100, thin=1, save_path=None):
     flat_samples = sampler.get_chain(discard=burnin, flat=True, thin=thin)
 
     fig = corner.corner(flat_samples, labels=labels, show_titles=True)
-    plt.show()
+
+    if save_path is not None:
+        plt.savefig(save_path.split('.')[0] + '_corner.png')
+    else:
+        plt.show()
 
 
 def print_MCMC_results(obj, sampler=None, burnin=100, sigma=1, filename=None):
