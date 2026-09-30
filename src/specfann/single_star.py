@@ -73,11 +73,17 @@ class single_star(object):
         self.__dict__.update(state)
         temp_parameters = self.parameters
 
-        try:
-            self.set_nn_bundle_path(self.nn_bundle_path)
-        except:
+
+        if not os.path.exists(self.nn_bundle_path):
             bundle_path = os.path.expanduser(f'~/.specfann/bundles/{self.nn_bundle_name}/')
+            if not os.path.exists(bundle_path):
+                raise FileNotFoundError(f"The neural network bundle '{self.nn_bundle_name}' was not found at '{bundle_path}'. Please ensure that the bundle is installed and the path is correct.")
             self.set_nn_bundle_path(bundle_path)
+        # try:
+        #     self.set_nn_bundle_path(self.nn_bundle_path)
+        # except:
+        #     bundle_path = os.path.expanduser(f'~/.specfann/bundles/{self.nn_bundle_name}/')
+        #     self.set_nn_bundle_path(bundle_path)
         
         self.parameters = temp_parameters
         
