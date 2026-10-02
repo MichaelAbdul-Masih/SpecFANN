@@ -152,7 +152,7 @@ class single_star(object):
 
     # -------------------Model Generation functions--------------------
 
-    def generate_synthetic_spectra(obj, param_set, use_considered_wavelengths=False):
+    def generate_synthetic_spectra(self, param_set, use_considered_wavelengths=False):
         """
         Generate synthetic spectra based on the provided parameters.
 
@@ -164,7 +164,7 @@ class single_star(object):
         synthetic_spectra (array-like): The synthetic spectra for each set of parameters.
         """
 
-        return model_gen.generate_synthetic_spectra(obj, param_set, use_considered_wavelengths)
+        return model_gen.generate_synthetic_spectra(self, param_set, use_considered_wavelengths)
 
 
     def generate_model(self, param_set):

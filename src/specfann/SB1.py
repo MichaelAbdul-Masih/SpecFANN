@@ -34,11 +34,11 @@ class SB1(object):
         self.parameters.si = self.parameters.parameter('si', 7.5, bounds=[6.0, 9.0], latex_string=r'$\epsilon_\mathrm{Si}$')
         self.parameters.vrot = self.parameters.parameter('vrot', 0, bounds=[0, 500], latex_string=r'$v \sin i$', unit=r'km s$^{-1}$')
         self.parameters.vmacro = self.parameters.parameter('vmacro', 0, bounds=[0, 500], latex_string=r'$v_\mathrm{macro}$', unit=r'km s$^{-1}$')
-        self.parameters.k_1 = self.parameters.parameter('k_1', 0.5, bounds=[0, 500], latex_string=r'$K_1$', unit=r'km s$^{-1}$')
+        self.parameters.k_1 = self.parameters.parameter('k_1', 100, bounds=[0, 500], latex_string=r'$K_1$', unit=r'km s$^{-1}$')
 
         self.parameters.gamma = self.parameters.parameter('gamma', 0, bounds=[-500, 500], latex_string=r'$\gamma$', unit=r'km s$^{-1}$')
         self.parameters.p = self.parameters.parameter('p', 1.0, bounds=[0, 10000], latex_string=r'$p$', unit=r'd')
-        self.parameters.p_dot = self.parameters.parameter('p_dot', 0.0, bounds=[-1, 1], fixed=True, latex_string=r'$\dot{p}$', unit=r's d$^{-1}$')
+        # self.parameters.p_dot = self.parameters.parameter('p_dot', 0.0, bounds=[-1, 1], fixed=True, latex_string=r'$\dot{p}$', unit=r's d$^{-1}$')
         self.parameters.t0 = self.parameters.parameter('t0', 0.0, bounds=[0, 999999999], latex_string=r'$t_0$', unit=r'days')
         self.parameters.esinw = self.parameters.parameter('esinw', 0.0, bounds=[0, 1], latex_string=r'$\root{e} \sin \omega$', unit=r'')
         self.parameters.ecosw = self.parameters.parameter('ecosw', 0.0, bounds=[0, 1], latex_string=r'$\root{e} \cos \omega$', unit=r'')
@@ -158,7 +158,7 @@ class SB1(object):
 
     # -------------------Model Generation functions--------------------
 
-    def generate_synthetic_spectra(obj, param_set, use_considered_wavelengths=False):
+    def generate_synthetic_spectra(self, param_set, use_considered_wavelengths=False):
         """
         Generate synthetic spectra based on the provided parameters.
 
@@ -170,7 +170,7 @@ class SB1(object):
         synthetic_spectra (array-like): The synthetic spectra for each set of parameters.
         """
 
-        return model_gen.generate_synthetic_spectra(obj, param_set, use_considered_wavelengths)
+        return model_gen.generate_SB_synthetic_spectra(self, param_set, use_considered_wavelengths)
 
 
     def generate_model(self, param_set):
@@ -187,7 +187,7 @@ class SB1(object):
         return model_gen.generate_model(self, param_set)
     
 
-    def generate_model_per_line(self, line, param_set, observed_wavelength_range=None):
+    def generate_model_per_line(self, line, param_set, observed_wavelength_arrays=None):
         """
         Generate a model based on the provided parameters.
 
@@ -198,7 +198,7 @@ class SB1(object):
         models (dict): A dictionary of models for each line.
         """
 
-        return model_gen.generate_composite_model_per_line(self, line, param_set, observed_wavelength_range)
+        return model_gen.generate_SB1_model_per_line(self, line, param_set, observed_wavelength_arrays)
 
     
     # -------------------Cost functions--------------------
