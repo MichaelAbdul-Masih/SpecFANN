@@ -163,9 +163,19 @@ def log_likelihood_spectrum(obj, param_set, fuzz=False):
         logf_ind = list(obj.parameters.__dict__.keys()).index('logf')
         logf = param_set[:, logf_ind]
         error = np.sqrt(obj._considered_error **2 + np.array(10**logf, ndmin=2).T * synthetic_fluxes**2)
-        log_likelihoods = calc_log_likelihoods_with_fuzz(obj._considered_fluxes, error, synthetic_fluxes)
+        if hasattr(obj, 'observed_bjds'):
+            log_likelihoods = np.zeros(len(param_set))
+            for i in range(len(obj.observed_bjds)):
+                log_likelihoods += calc_log_likelihoods_with_fuzz(obj._considered_fluxes[i], error[i], synthetic_fluxes[i])
+        else:
+            log_likelihoods = calc_log_likelihoods_with_fuzz(obj._considered_fluxes, error, synthetic_fluxes)
     else:
-        log_likelihoods = calc_log_likelihoods(obj._considered_fluxes, obj._considered_error, synthetic_fluxes)
+        if hasattr(obj, 'observed_bjds'):
+            log_likelihoods = np.zeros(len(param_set))
+            for i in range(len(obj.observed_bjds)):
+                log_likelihoods += calc_log_likelihoods(obj._considered_fluxes[i], obj._considered_error[i], synthetic_fluxes[i])
+        else:
+            log_likelihoods = calc_log_likelihoods(obj._considered_fluxes, obj._considered_error, synthetic_fluxes)
 
     return log_likelihoods
 
@@ -234,9 +244,19 @@ def reduced_chi_square_spectrum(obj, model_args, fuzz=False):
         logf_ind = list(obj.parameters.__dict__.keys()).index('logf')
         logf = param_set[:, logf_ind]
         error = np.sqrt(obj._considered_error **2 + np.array(10**logf, ndmin=2).T * synthetic_fluxes**2)
-        chi_squares = calc_chi_square(obj._considered_fluxes, error, synthetic_fluxes)
+        if hasattr(obj, 'observed_bjds'):
+            chi_squares = np.zeros(len(param_set))
+            for i in range(len(obj.observed_bjds)):
+                chi_squares += calc_chi_square(obj._considered_fluxes[i], error[i], synthetic_fluxes[i])
+        else:
+            chi_squares = calc_chi_square(obj._considered_fluxes, error, synthetic_fluxes)
     else:
-        chi_squares = calc_chi_square(obj._considered_fluxes, obj._considered_error, synthetic_fluxes)
+        if hasattr(obj, 'observed_bjds'):
+            chi_squares = np.zeros(len(param_set))
+            for i in range(len(obj.observed_bjds)):
+                chi_squares += calc_chi_square(obj._considered_fluxes[i], obj._considered_error[i], synthetic_fluxes[i])
+        else:
+            chi_squares = calc_chi_square(obj._considered_fluxes, obj._considered_error, synthetic_fluxes)
 
     reduced_chi_squares = chi_squares / (len(obj._considered_wavelengths) - len(obj.free_parameters))
 
