@@ -45,3 +45,5 @@ from .io_functions import open_project, install_bundle, list_available_bundles
 
 from .single_star import single_star
 from .composite import composite
+from .SB1 import SB1
+from .SB2 import SB2

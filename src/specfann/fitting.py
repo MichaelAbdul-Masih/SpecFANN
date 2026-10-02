@@ -271,10 +271,24 @@ def run_mcmc(obj, initial_positions=None, n_walkers=None, n_steps=None, fuzz=Fal
     obj.free_parameters = [param for param in obj.parameters.__dict__ if not obj.parameters.__dict__[param].fixed]
     obj.mcmc_free_parameters = obj.free_parameters.copy()
 
-    obj._obs_inds, obj._obs_inds_dict = calc_obs_inds_from_bounds(obj.observed_wavelength, obj.line_list)
-    obj._considered_wavelengths = obj.observed_wavelength[obj._obs_inds]
-    obj._considered_fluxes = obj.observed_flux[obj._obs_inds]
-    obj._considered_error = obj.observed_error[obj._obs_inds]
+    if hasattr(obj, 'observed_wavelength'):
+        obj._obs_inds, obj._obs_inds_dict = calc_obs_inds_from_bounds(obj.observed_wavelength, obj.line_list)
+        obj._considered_wavelengths = obj.observed_wavelength[obj._obs_inds]
+        obj._considered_fluxes = obj.observed_flux[obj._obs_inds]
+        obj._considered_error = obj.observed_error[obj._obs_inds]
+    else:
+        obj._obs_inds = []
+        obj._obs_inds_dict = []
+        obj._considered_wavelengths = []
+        obj._considered_fluxes = []
+        obj._considered_error = []
+        for i in range(len(obj.observed_bjds)):
+            inds, inds_dict = calc_obs_inds_from_bounds(obj.observed_wavelengths[i], obj.line_list)
+            obj._obs_inds.append(inds)
+            obj._obs_inds_dict.append(inds_dict)
+            obj._considered_wavelengths.append(obj.observed_wavelengths[i][inds])
+            obj._considered_fluxes.append(obj.observed_fluxes[i][inds])
+            obj._considered_error.append(obj.observed_errors[i][inds])
 
     # Initialize the walkers if not passed to the function
     if initial_positions is None:
@@ -460,10 +474,24 @@ def run_nested_sampling(obj, fuzz=False, return_result=False, step_sampler=None,
     obj.free_parameters = [param for param in obj.parameters.__dict__ if not obj.parameters.__dict__[param].fixed]
     obj.nested_sampling_free_parameters = obj.free_parameters.copy()
 
-    obj._obs_inds, obj._obs_inds_dict = calc_obs_inds_from_bounds(obj.observed_wavelength, obj.line_list)
-    obj._considered_wavelengths = obj.observed_wavelength[obj._obs_inds]
-    obj._considered_fluxes = obj.observed_flux[obj._obs_inds]
-    obj._considered_error = obj.observed_error[obj._obs_inds]
+    if hasattr(obj, 'observed_wavelength'):
+        obj._obs_inds, obj._obs_inds_dict = calc_obs_inds_from_bounds(obj.observed_wavelength, obj.line_list)
+        obj._considered_wavelengths = obj.observed_wavelength[obj._obs_inds]
+        obj._considered_fluxes = obj.observed_flux[obj._obs_inds]
+        obj._considered_error = obj.observed_error[obj._obs_inds]
+    else:
+        obj._obs_inds = []
+        obj._obs_inds_dict = []
+        obj._considered_wavelengths = []
+        obj._considered_fluxes = []
+        obj._considered_error = []
+        for i in range(len(obj.observed_bjds)):
+            inds, inds_dict = calc_obs_inds_from_bounds(obj.observed_wavelengths[i], obj.line_list)
+            obj._obs_inds.append(inds)
+            obj._obs_inds_dict.append(inds_dict)
+            obj._considered_wavelengths.append(obj.observed_wavelengths[i][inds])
+            obj._considered_fluxes.append(obj.observed_fluxes[i][inds])
+            obj._considered_error.append(obj.observed_errors[i][inds])
 
     ndim = len(obj.free_parameters)
     param_names = list(obj.free_parameters)
@@ -610,10 +638,24 @@ def run_Nelder_Mead(obj, initial_guess=None, return_result = False):
     if initial_guess is None:
         initial_guess = [obj.parameters.__dict__[param].value for param in obj.free_parameters]
 
-    obj._obs_inds, obj._obs_inds_dict = calc_obs_inds_from_bounds(obj.observed_wavelength, obj.line_list)
-    obj._considered_wavelengths = obj.observed_wavelength[obj._obs_inds]
-    obj._considered_fluxes = obj.observed_flux[obj._obs_inds]
-    obj._considered_error = obj.observed_error[obj._obs_inds]
+    if hasattr(obj, 'observed_wavelength'):
+        obj._obs_inds, obj._obs_inds_dict = calc_obs_inds_from_bounds(obj.observed_wavelength, obj.line_list)
+        obj._considered_wavelengths = obj.observed_wavelength[obj._obs_inds]
+        obj._considered_fluxes = obj.observed_flux[obj._obs_inds]
+        obj._considered_error = obj.observed_error[obj._obs_inds]
+    else:
+        obj._obs_inds = []
+        obj._obs_inds_dict = []
+        obj._considered_wavelengths = []
+        obj._considered_fluxes = []
+        obj._considered_error = []
+        for i in range(len(obj.observed_bjds)):
+            inds, inds_dict = calc_obs_inds_from_bounds(obj.observed_wavelengths[i], obj.line_list)
+            obj._obs_inds.append(inds)
+            obj._obs_inds_dict.append(inds_dict)
+            obj._considered_wavelengths.append(obj.observed_wavelengths[i][inds])
+            obj._considered_fluxes.append(obj.observed_fluxes[i][inds])
+            obj._considered_error.append(obj.observed_errors[i][inds])
 
     nll = lambda *args: -obj.log_probability(*args)[0]
 
@@ -763,10 +805,24 @@ def run_GA(obj, n_generations=300, population_size=50, return_result=False):
     # reinitialize the free parameters array to catch any changed parameters
     obj.free_parameters = [param for param in obj.parameters.__dict__ if not obj.parameters.__dict__[param].fixed]
 
-    obj._obs_inds, obj._obs_inds_dict = calc_obs_inds_from_bounds(obj.observed_wavelength, obj.line_list)
-    obj._considered_wavelengths = obj.observed_wavelength[obj._obs_inds]
-    obj._considered_fluxes = obj.observed_flux[obj._obs_inds]
-    obj._considered_error = obj.observed_error[obj._obs_inds]
+    if hasattr(obj, 'observed_wavelength'):
+        obj._obs_inds, obj._obs_inds_dict = calc_obs_inds_from_bounds(obj.observed_wavelength, obj.line_list)
+        obj._considered_wavelengths = obj.observed_wavelength[obj._obs_inds]
+        obj._considered_fluxes = obj.observed_flux[obj._obs_inds]
+        obj._considered_error = obj.observed_error[obj._obs_inds]
+    else:
+        obj._obs_inds = []
+        obj._obs_inds_dict = []
+        obj._considered_wavelengths = []
+        obj._considered_fluxes = []
+        obj._considered_error = []
+        for i in range(len(obj.observed_bjds)):
+            inds, inds_dict = calc_obs_inds_from_bounds(obj.observed_wavelengths[i], obj.line_list)
+            obj._obs_inds.append(inds)
+            obj._obs_inds_dict.append(inds_dict)
+            obj._considered_wavelengths.append(obj.observed_wavelengths[i][inds])
+            obj._considered_fluxes.append(obj.observed_fluxes[i][inds])
+            obj._considered_error.append(obj.observed_errors[i][inds])
 
     # translate the parameters to a format suitable for the genetic algorithm
     ga_params = _translate_params_to_GA(obj)

@@ -3,6 +3,7 @@ import scipy.interpolate as si
 from scipy.signal import fftconvolve
 import math
 from scipy.special import erf
+from . import orbit
 
 
 
@@ -134,7 +135,7 @@ def generate_synthetic_spectra(obj, param_set, use_considered_wavelengths=False)
         synthetic_spectra = np.ones((len(param_set), len(obj._considered_wavelengths)))
         for line in obj.line_list.keys():
             # Get the model wavelengths and fluxes
-            model_wavelengths, model_fluxes = obj.generate_model_per_line(line, param_set, observed_wavelength_range=obj._considered_wavelengths[obj._obs_inds_dict[line]])
+            model_wavelengths, model_fluxes = obj.generate_model_per_line(line, param_set, observed_wavelength_array=obj._considered_wavelengths[obj._obs_inds_dict[line]])
             synthetic_spectra[:, obj._obs_inds_dict[line]] *= model_fluxes
 
         return obj._considered_wavelengths, synthetic_spectra
@@ -150,8 +151,55 @@ def generate_synthetic_spectra(obj, param_set, use_considered_wavelengths=False)
 
         for line in models.keys():
             w1 = models[line]['wavelengths']
-            f1 = models[line]['fluxes'][0]
-            synthetic_spectra *= np.interp(model_wavelengths, w1, f1, right=1, left=1)
+            f1 = models[line]['fluxes']
+            for i in range(len(param_set)):
+                synthetic_spectra[i] *= np.interp(model_wavelengths, w1[i], f1[i], right=1, left=1)
+
+        return model_wavelengths, synthetic_spectra
+
+
+def generate_SB_synthetic_spectra(obj, param_set, use_considered_wavelengths=False):
+    """
+    Generate synthetic spectra for SB1 or SB2 systems based on the provided parameters.
+
+    Parameters:
+    param_set (array-like): The parameters for the model.
+    use_considered_wavelengths (bool): Whether to use the considered wavelengths for interpolation.
+
+    Returns:
+    synthetic_spectra (array-like): The synthetic spectra for each set of parameters.
+    """
+
+    param_set = np.array(param_set, ndmin=2)
+
+    if use_considered_wavelengths:
+        synthetic_spectra_all_times = []
+        for i in range(len(obj.observed_bjds)):
+            synthetic_spectra = np.ones((len(param_set), len(obj._considered_wavelengths[i])))
+            for line in obj.line_list.keys():
+                # Get the model wavelengths and fluxes
+                model_wavelengths, model_fluxes = obj.generate_model_per_line(line, param_set, observed_wavelength_arrays=obj._considered_wavelengths[i][obj._obs_inds_dict[i][line]])
+                synthetic_spectra[:, obj._obs_inds_dict[i][line]] *= model_fluxes
+
+            synthetic_spectra_all_times.append(synthetic_spectra)
+
+        return obj._considered_wavelengths, synthetic_spectra_all_times
+    
+    else:
+        models = obj.generate_model(param_set)
+
+        min_wavelength = min([np.min(models[line]['wavelengths']) for line in obj.line_list.keys()])
+        max_wavelength = max([np.max(models[line]['wavelengths']) for line in obj.line_list.keys()])
+
+        model_wavelengths = np.arange(min_wavelength, max_wavelength, 0.01)
+        synthetic_spectra = np.ones((len(obj.observed_bjds), len(param_set), len(model_wavelengths)))
+
+        for line in models.keys():
+            w1 = models[line]['wavelengths']
+            f1 = models[line]['fluxes']
+            for i in range(len(obj.observed_bjds)):
+                for j in range(len(param_set)):
+                    synthetic_spectra[i, j] *= np.interp(model_wavelengths, w1[i][j], f1[i][j], right=1, left=1)
 
         return model_wavelengths, synthetic_spectra
 
@@ -178,7 +226,7 @@ def generate_model(obj, param_set):
     return models
 
 
-def generate_model_per_line(obj, line, param_set, observed_wavelength_range=None):
+def generate_model_per_line(obj, line, param_set, observed_wavelength_array=None):
     """
     Generate a model based on the provided parameters.
 
@@ -207,16 +255,16 @@ def generate_model_per_line(obj, line, param_set, observed_wavelength_range=None
     # Doppler shift the lines
     shifted_wavelengths = dopler_shift_lines(broadened_wavelength, param_set[:, gamma_ind])
 
-    if observed_wavelength_range is not None:
-        interp_fluxes = np.empty((len(shifted_wavelengths), len(observed_wavelength_range)))
+    if observed_wavelength_array is not None:
+        interp_fluxes = np.empty((len(shifted_wavelengths), len(observed_wavelength_array)))
         for i in range(len(interp_fluxes)):
-            interp_fluxes[i] = np.interp(observed_wavelength_range, shifted_wavelengths[i], broadened_fluxes[i], left=1.0, right=1.0)
-        return observed_wavelength_range, interp_fluxes
+            interp_fluxes[i] = np.interp(observed_wavelength_array, shifted_wavelengths[i], broadened_fluxes[i], left=1.0, right=1.0)
+        return observed_wavelength_array, interp_fluxes
     else:
         return shifted_wavelengths, broadened_fluxes
 
 
-def generate_composite_model_per_line(obj, line, param_set, observed_wavelength_range=None):
+def generate_composite_model_per_line(obj, line, param_set, observed_wavelength_array=None):
     """
     Generate a model based on the provided parameters.
 
@@ -224,7 +272,7 @@ def generate_composite_model_per_line(obj, line, param_set, observed_wavelength_
     obj (object): The composite object containing the parameters and line list.
     line (str): The name of the line to be fitted.
     param_set (array-like): The parameters for the model.
-    observed_wavelength_range (array-like): The range of observed wavelengths.
+    observed_wavelength_array (array-like): The array of observed wavelengths.
 
     Returns:
     models (dict): A dictionary of models for each line.
@@ -256,11 +304,11 @@ def generate_composite_model_per_line(obj, line, param_set, observed_wavelength_
         # applly instrumental broadening to the combined line
         broadened_wavelength, broadened_fluxes = inst_broadening_vectorized(combined_wavelength, combined_fluxes, param_set[:, inst_res_ind])
 
-        if observed_wavelength_range is not None:
+        if observed_wavelength_array is not None:
             # Interpolate the broadened fluxes to the observed wavelength grid
             f = si.interp1d(broadened_wavelength, broadened_fluxes, fill_value=np.array([1.0]), bounds_error=False)
-            broadened_fluxes = f(observed_wavelength_range)
-            broadened_wavelength = observed_wavelength_range
+            broadened_fluxes = f(observed_wavelength_array)
+            broadened_wavelength = observed_wavelength_array
 
         return broadened_wavelength, broadened_fluxes
 
@@ -271,13 +319,145 @@ def generate_composite_model_per_line(obj, line, param_set, observed_wavelength_
         # combine the broadened lines
         combined_wavelength, combined_fluxes = combine_binary_lines(broadened_wavelength_1, broadened_fluxes_1, broadened_wavelength_2, broadened_fluxes_2, param_set[:, rv1_ind], rv2, param_set[:, lr1_ind])
 
-        if observed_wavelength_range is not None:
+        if observed_wavelength_array is not None:
             # Interpolate the combined fluxes to the observed wavelength grid
             f = si.interp1d(combined_wavelength, combined_fluxes, fill_value=np.array([1.0]), bounds_error=False)
-            combined_fluxes = f(observed_wavelength_range)
-            combined_wavelength = observed_wavelength_range
+            combined_fluxes = f(observed_wavelength_array)
+            combined_wavelength = observed_wavelength_array
 
         return combined_wavelength, combined_fluxes
+
+
+def generate_SB1_model_per_line(obj, line, param_set, observed_wavelength_arrays=None):
+    """
+    Generate a model based on the provided parameters.
+
+    Parameters:
+    obj (object): The SB1 object containing the parameters and line list.
+    line (str): The name of the line to be fitted.
+    param_set (array-like): The parameters for the model.
+    observed_wavelength_arrays (list): The arrays of observed wavelengths.
+
+    Returns:
+    models (dict): A dictionary of models for each line.
+    """
+
+    vrot_ind = list(obj.parameters.__dict__.keys()).index('vrot')
+    vmacro_ind = list(obj.parameters.__dict__.keys()).index('vmacro')
+    inst_res_ind = list(obj.parameters.__dict__.keys()).index('inst_res')
+
+    if obj.sbf.use_specfann_broadening:
+        # Use the neural network to predict the fluxes for the line
+        model_fluxes = obj.sbf.predict_fluxes_from_nn(obj.parameters, obj.line_list, line, param_set)
+
+        # Broaden the lines
+        broadened_wavelength, broadened_fluxes = broaden_lines(obj.line_list[line].wavelength, model_fluxes, param_set[:, vrot_ind], param_set[:, vmacro_ind], param_set[:, inst_res_ind])
+    else:
+        # Use the neural network to predict the fluxes for the line and apply broadening
+        broadened_wavelength, broadened_fluxes = obj.sbf.predict_fluxes_from_nn(obj.parameters, obj.line_list, line, param_set)
+
+    # calculate the radial velocities for the SB1 system
+    period_ind = list(obj.parameters.__dict__.keys()).index('p')
+    t0_ind = list(obj.parameters.__dict__.keys()).index('t0')
+    esinw_ind = list(obj.parameters.__dict__.keys()).index('esinw')
+    ecosw_ind = list(obj.parameters.__dict__.keys()).index('ecosw')
+    k_ind = list(obj.parameters.__dict__.keys()).index('k_1')
+    gamma_ind = list(obj.parameters.__dict__.keys()).index('gamma')
+
+    ecc = param_set[:, esinw_ind]**2 + param_set[:, ecosw_ind]**2
+    w = np.arctan2(param_set[:, esinw_ind], param_set[:, ecosw_ind])
+
+    rvs = orbit.calc_RVs(param_set[:, period_ind], param_set[:, t0_ind], ecc, w, param_set[:, k_ind], param_set[:, gamma_ind], obj.observed_bjds)
+    
+    # Doppler shift the lines, apply instrumental broadening, and interpolate to the observed wavelength grid
+    shifted_wavelengths = []
+    shifted_fluxes = []
+    for i, rv in enumerate(rvs.T):
+        shifted_wavelength = dopler_shift_lines(broadened_wavelength, rv)
+
+        if observed_wavelength_arrays is not None:
+            interp_fluxes = np.empty((len(shifted_wavelength), len(observed_wavelength_arrays[i])))
+            for j in range(len(interp_fluxes)):
+                interp_fluxes[j] = np.interp(observed_wavelength_arrays[i], shifted_wavelength[j], broadened_fluxes[j], left=1.0, right=1.0)
+            shifted_wavelengths.append(observed_wavelength_arrays[i])
+            shifted_fluxes.append(interp_fluxes)
+        else:
+            shifted_wavelengths.append(shifted_wavelength)
+            shifted_fluxes.append(broadened_fluxes)
+
+    return shifted_wavelengths, shifted_fluxes
+
+
+def generate_SB2_model_per_line(obj, line, param_set, observed_wavelength_arrays=None):
+    """
+    Generate a model based on the provided parameters.
+
+    Parameters:
+    obj (object): The SB1 object containing the parameters and line list.
+    line (str): The name of the line to be fitted.
+    param_set (array-like): The parameters for the model.
+    observed_wavelength_arrays (list): The arrays of observed wavelengths.
+
+    Returns:
+    models (dict): A dictionary of models for each line.
+    """
+
+    vrot1_ind = list(obj.parameters.__dict__.keys()).index('vrot_1')
+    vrot2_ind = list(obj.parameters.__dict__.keys()).index('vrot_2')
+    vmacro1_ind = list(obj.parameters.__dict__.keys()).index('vmacro_1')
+    vmacro2_ind = list(obj.parameters.__dict__.keys()).index('vmacro_2')
+    inst_res_ind = list(obj.parameters.__dict__.keys()).index('inst_res')
+    lr1_ind = list(obj.parameters.__dict__.keys()).index('lr_1')
+
+
+    if obj.sbf.use_specfann_broadening:
+        # Use the neural network to predict the fluxes for the line
+        model_fluxes_1 = obj.sbf.predict_fluxes_from_nn(obj.parameters, obj.line_list, line, param_set, suffix='_1')
+        model_fluxes_2 = obj.sbf.predict_fluxes_from_nn(obj.parameters, obj.line_list, line, param_set, suffix='_2')
+
+        # Broaden the lines
+        broadened_wavelength_1, broadened_fluxes_1 = broaden_lines(obj.line_list[line].wavelength, model_fluxes_1, param_set[:, vrot1_ind], param_set[:, vmacro1_ind], inst_res=None)
+        broadened_wavelength_2, broadened_fluxes_2 = broaden_lines(obj.line_list[line].wavelength, model_fluxes_2, param_set[:, vrot2_ind], param_set[:, vmacro2_ind], inst_res=None)
+
+    else:
+        # Use the neural network to predict the fluxes for the line and apply broadening
+        broadened_wavelength_1, broadened_fluxes_1 = obj.sbf.predict_fluxes_from_nn(obj.parameters, obj.line_list, line, param_set, suffix='_1')
+        broadened_wavelength_2, broadened_fluxes_2 = obj.sbf.predict_fluxes_from_nn(obj.parameters, obj.line_list, line, param_set, suffix='_2')
+
+    # calculate the radial velocities for the SB2 system
+    period_ind = list(obj.parameters.__dict__.keys()).index('p')
+    t0_ind = list(obj.parameters.__dict__.keys()).index('t0')
+    esinw_ind = list(obj.parameters.__dict__.keys()).index('esinw')
+    ecosw_ind = list(obj.parameters.__dict__.keys()).index('ecosw')
+    k1_ind = list(obj.parameters.__dict__.keys()).index('k_1')
+    k2_ind = list(obj.parameters.__dict__.keys()).index('k_2')
+    gamma_ind = list(obj.parameters.__dict__.keys()).index('gamma')
+
+    ecc = param_set[:, esinw_ind]**2 + param_set[:, ecosw_ind]**2
+    w = np.arctan2(param_set[:, esinw_ind], param_set[:, ecosw_ind])
+
+    rvs_1 = orbit.calc_RVs(param_set[:, period_ind], param_set[:, t0_ind], ecc, w, param_set[:, k1_ind], param_set[:, gamma_ind], obj.observed_bjds)
+    rvs_2 = orbit.calc_RVs(param_set[:, period_ind], param_set[:, t0_ind], ecc, w, param_set[:, k2_ind], param_set[:, gamma_ind], obj.observed_bjds)
+
+    # Doppler shift and combine lines, apply instrumental broadening, and interpolate to the observed wavelength grid
+    shifted_wavelengths = []
+    shifted_fluxes = []
+    for i in range(len(obj.observed_bjds)):
+        combined_wavelength, combined_fluxes = combine_binary_lines(broadened_wavelength_1, broadened_fluxes_1, broadened_wavelength_2, broadened_fluxes_2, rvs_1.T[i], rvs_2.T[i], param_set[:, lr1_ind])
+
+        inst_broadened_wavelength, inst_broadened_fluxes = inst_broadening_vectorized(combined_wavelength, combined_fluxes, param_set[:, inst_res_ind])
+
+        if observed_wavelength_arrays is not None:
+            interp_fluxes = np.empty((len(inst_broadened_wavelength), len(observed_wavelength_arrays[i])))
+            for j in range(len(interp_fluxes)):
+                interp_fluxes[j] = np.interp(observed_wavelength_arrays[i], inst_broadened_wavelength[j], inst_broadened_fluxes[j], left=1.0, right=1.0)
+            shifted_wavelengths.append(observed_wavelength_arrays[i])
+            shifted_fluxes.append(interp_fluxes)
+        else:
+            shifted_wavelengths.append(inst_broadened_wavelength)
+            shifted_fluxes.append(inst_broadened_fluxes)
+
+    return shifted_wavelengths, shifted_fluxes
 
 
 def broaden_lines(wavelength, fluxes, vrot, vmacro, inst_res):
