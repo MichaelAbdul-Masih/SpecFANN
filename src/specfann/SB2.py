@@ -53,8 +53,8 @@ class SB2(object):
         self.parameters.p = self.parameters.parameter('p', 1.0, bounds=[0, 10000], latex_string=r'$p$', unit=r'd')
         # self.parameters.p_dot = self.parameters.parameter('p_dot', 0.0, bounds=[-1, 1], fixed=True, latex_string=r'$\dot{p}$', unit=r's d$^{-1}$')
         self.parameters.t0 = self.parameters.parameter('t0', 0.0, bounds=[0, 999999999], latex_string=r'$t_0$', unit=r'days')
-        self.parameters.esinw = self.parameters.parameter('esinw', 0.0, bounds=[-1, 1], latex_string=r'$\root{e} \sin \omega$', unit=r'')
-        self.parameters.ecosw = self.parameters.parameter('ecosw', 0.0, bounds=[-1, 1], latex_string=r'$\root{e} \cos \omega$', unit=r'')
+        self.parameters.esinw = self.parameters.parameter('esinw', 0.0, bounds=[-1, 1], latex_string=r'$\sqrt{e} \sin \omega$', unit=r'')
+        self.parameters.ecosw = self.parameters.parameter('ecosw', 0.0, bounds=[-1, 1], latex_string=r'$\sqrt{e} \cos \omega$', unit=r'')
 
         if bundle_path is None:
             if bundle_name is None:
@@ -200,18 +200,19 @@ class SB2(object):
         return model_gen.generate_model(self, param_set)
     
 
-    def generate_model_per_line(self, line, param_set, observed_wavelength_range=None):
+    def generate_model_per_line(self, line, param_set, observed_wavelength_arrays=None):
         """
         Generate a model based on the provided parameters.
 
         Parameters:
+        line (str): The name of the line to generate a model for.
         param_set (array-like): The parameters for the model.
 
         Returns:
         models (dict): A dictionary of models for each line.
         """
 
-        return model_gen.generate_SB2_model_per_line(self, line, param_set, observed_wavelength_range)
+        return model_gen.generate_SB2_model_per_line(self, line, param_set, observed_wavelength_arrays)
 
     
     # -------------------Cost functions--------------------

@@ -243,8 +243,7 @@ class SB1(object):
         esinw_ind = list(self.parameters.__dict__.keys()).index('esinw')
         prior_array += np.where(np.sqrt(param_set[:, ecosw_ind]**2 + param_set[:, esinw_ind]**2) <= 1, 0, -np.inf)
 
-        prior_array = self.sbf.update_priors(self._parameters_1, param_set, prior_array)
-        prior_array = self.sbf.update_priors(self._parameters_2, param_set, prior_array)
+        prior_array = self.sbf.update_priors(self.parameters, param_set, prior_array)
 
         return prior_array
 
@@ -286,21 +285,6 @@ class SB1(object):
         n_walkers (int): The number of walkers to use in the MCMC simulation.
         n_steps (int): The number of steps to run the MCMC simulation for.
         """
-
-        # create separate parameter objects for each star by removing the _1 and _2 suffixes (this is needed for the prior calculation)
-        params_star1 = copy.deepcopy(self.parameters)
-        star1_keys = [key for key in params_star1.__dict__.keys() if key.endswith('_1')]
-        for key in star1_keys:
-            setattr(params_star1, key[:-2], getattr(params_star1, key))
-            delattr(params_star1, key)
-        self._parameters_1 = params_star1
-
-        params_star2 = copy.deepcopy(self.parameters)
-        star2_keys = [key for key in params_star2.__dict__.keys() if key.endswith('_2')]
-        for key in star2_keys:
-            setattr(params_star2, key[:-2], getattr(params_star2, key))
-            delattr(params_star2, key)
-        self._parameters_2 = params_star2
 
         fitting.run_mcmc(self, initial_positions, n_walkers, n_steps, fuzz, return_sampler)
 
