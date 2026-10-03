@@ -13,7 +13,9 @@ def calc_phase(period, t0, t):
     Returns:
     phase (array-like): The calculated phases corresponding to the observation times.
     """
-
+    period = np.asarray(period)
+    t0 = np.asarray(t0)
+    t = np.asarray(t)
     phase = ((t[None, :] - t0[:, None]) / period[:,None]) % 1
     return phase
 
@@ -33,7 +35,7 @@ def solve_Keplers_equation(E, phis, ecc):
 
     E2 = (2*np.pi*phis - ecc[:, None]*(E*np.cos(E) - np.sin(E))) / (1. - ecc[:, None]*np.cos(E))
     eps = np.abs(E2 - E)
-    if np.all(eps < 1E-10):
+    if np.all(eps < 1E-6):
         return E2
     else:
         return solve_Keplers_equation(E2, phis, ecc)
@@ -50,7 +52,8 @@ def calc_true_anomaly(phase, ecc):
     Returns:
     true_anomaly (array-like): The calculated true anomalies.
     """
-
+    ecc[ecc < 0] = 0
+    ecc[ecc > 0.99999] = 0
     E = 2*np.pi*phase
     E = solve_Keplers_equation(E, phase, ecc)
     true_anomaly = 2*np.arctan(np.sqrt((1 + ecc[:, None])/(1 - ecc[:, None])) * np.tan(E/2))
@@ -77,4 +80,6 @@ def calc_RVs(period, t0, ecc, omega, K, gamma, t):
     phase = calc_phase(period, t0, t)
     true_anomaly = calc_true_anomaly(phase, ecc)
     RVs = K[:, None] * (np.cos(true_anomaly + omega[:, None]) + ecc[:, None]*np.cos(omega[:, None])) + gamma[:, None]
+    if np.isnan(RVs).any():
+        print(period, t0, ecc, omega, K, gamma, t)
     return RVs

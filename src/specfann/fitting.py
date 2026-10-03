@@ -162,12 +162,13 @@ def log_likelihood_spectrum(obj, param_set, fuzz=False):
     if fuzz:
         logf_ind = list(obj.parameters.__dict__.keys()).index('logf')
         logf = param_set[:, logf_ind]
-        error = np.sqrt(obj._considered_error **2 + np.array(10**logf, ndmin=2).T * synthetic_fluxes**2)
         if hasattr(obj, 'observed_bjds'):
             log_likelihoods = np.zeros(len(param_set))
             for i in range(len(obj.observed_bjds)):
+                error = np.sqrt(obj._considered_error[i] **2 + np.array(10**logf, ndmin=2).T * synthetic_fluxes[i]**2)
                 log_likelihoods += calc_log_likelihoods_with_fuzz(obj._considered_fluxes[i], error[i], synthetic_fluxes[i])
         else:
+            error = np.sqrt(obj._considered_error **2 + np.array(10**logf, ndmin=2).T * synthetic_fluxes**2)
             log_likelihoods = calc_log_likelihoods_with_fuzz(obj._considered_fluxes, error, synthetic_fluxes)
     else:
         if hasattr(obj, 'observed_bjds'):
@@ -911,8 +912,12 @@ def _calculate_GA_probabilities(obj, red_chi2s):
 
     # calculate degrees of freedom
     degrees_of_freedom = 0
-    for line in obj.line_list.keys():
-        degrees_of_freedom += len(np.where((obj.observed_wavelength >= obj.line_list[line].fit_range[0]) & (obj.observed_wavelength <= obj.line_list[line].fit_range[1]))[0])
+
+    if hasattr(obj, 'observed_wavelength'):
+        degrees_of_freedom += len(obj._considered_wavelengths)
+    else:
+        for i in range(len(obj._considered_wavelengths)):
+            degrees_of_freedom += len(obj._considered_wavelengths[i])
 
     degrees_of_freedom -= len(obj.free_parameters)
 
