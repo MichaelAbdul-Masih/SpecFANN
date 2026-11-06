@@ -259,7 +259,11 @@ def reduced_chi_square_spectrum(obj, model_args, fuzz=False):
         else:
             chi_squares = calc_chi_square(obj._considered_fluxes, obj._considered_error, synthetic_fluxes)
 
-    reduced_chi_squares = chi_squares / (len(obj._considered_wavelengths) - len(obj.free_parameters))
+    if hasattr(obj, 'observed_bjds'):
+        total_points = sum(len(obj._considered_wavelengths[i]) for i in range(len(obj.observed_bjds)))
+        reduced_chi_squares = chi_squares / (total_points - len(obj.free_parameters))
+    else:
+        reduced_chi_squares = chi_squares / (len(obj._considered_wavelengths) - len(obj.free_parameters))
 
     return reduced_chi_squares
 

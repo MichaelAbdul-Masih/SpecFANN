@@ -173,15 +173,15 @@ def generate_SB_synthetic_spectra(obj, param_set, use_considered_wavelengths=Fal
     param_set = np.array(param_set, ndmin=2)
 
     if use_considered_wavelengths:
-        synthetic_spectra_all_times = []
+        synthetic_spectra_all_times = [np.ones((len(param_set), len(obj._considered_wavelengths[i]))) for i in range(len(obj.observed_bjds))]
         for line in obj.line_list.keys():
             # Get the model wavelengths and fluxes
             model_wavelengths, model_fluxes = obj.generate_model_per_line(line, param_set, observed_wavelength_arrays=[obj._considered_wavelengths[i][obj._obs_inds_dict[i][line]] for i in range(len(obj.observed_bjds))])
             for i in range(len(obj.observed_bjds)):
-                synthetic_spectra = np.ones((len(param_set), len(obj._considered_wavelengths[i])))
-                synthetic_spectra[:, obj._obs_inds_dict[i][line]] *= model_fluxes[i]
+                # synthetic_spectra = np.ones((len(param_set), len(obj._considered_wavelengths[i])))
+                synthetic_spectra_all_times[i][:, obj._obs_inds_dict[i][line]] *= model_fluxes[i]
 
-                synthetic_spectra_all_times.append(synthetic_spectra)
+                # synthetic_spectra_all_times.append(synthetic_spectra)
 
         return obj._considered_wavelengths, synthetic_spectra_all_times
     
@@ -382,8 +382,12 @@ def generate_SB1_model_per_line(obj, line, param_set, observed_wavelength_arrays
             shifted_wavelengths.append(observed_wavelength_arrays[i])
             shifted_fluxes.append(interp_fluxes)
         else:
-            shifted_wavelengths.append(shifted_wavelength)
-            shifted_fluxes.append(broadened_fluxes)
+            common_wavelength = np.arange(np.min(shifted_wavelength), np.max(shifted_wavelength), 0.01)
+            interp_fluxes = np.empty((len(shifted_wavelength), len(common_wavelength)))
+            for j in range(len(shifted_wavelength)):
+                interp_fluxes[j] = np.interp(common_wavelength, shifted_wavelength[j], broadened_fluxes[j], left=1.0, right=1.0)
+            shifted_wavelengths.append(common_wavelength)
+            shifted_fluxes.append(interp_fluxes)
 
     return shifted_wavelengths, shifted_fluxes
 
