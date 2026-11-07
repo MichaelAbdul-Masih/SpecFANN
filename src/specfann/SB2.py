@@ -16,7 +16,7 @@ class SB2(object):
     """
 
     def __init__(self, bundle_path=None, bundle_name=None):
-        default_bundle_name = 'MW_v1.4'
+        default_bundle_name = 'MW_v1.5a'
 
         self.observed_wavelengths = []
         self.observed_fluxes = []
@@ -416,6 +416,7 @@ class SB2(object):
         else:
             plt.show()
 
+
     def print_MCMC_results(self, sampler=None, burnin=100, sigma=1, filename=None):
         """
         Print the results of the MCMC simulation.
@@ -538,6 +539,7 @@ class SB2(object):
             plt.savefig(save_path)
         else:
             plt.show()
+
 
     def print_nested_sampling_results(obj, result=None):
         """

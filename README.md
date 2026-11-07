@@ -1,9 +1,8 @@
-# SpecFANN 1.0.1
+# SpecFANN 1.1.0a
 
 Introduction
 ------------
-SpecFANN (Spectroscopic Fitting via Artificial Neural Networks) is a deep learning based FASTWIND emulator and spectroscopic fitting suite written in Python.  Using a series of neural networks trained to emulate individual FASTWIND line profiles, SpecFANN allows the user to very quickly produce forward models for any subset of the ~140 included spectral lines, and allows the user to fit observed spectra using various minimization techniques and samplers. SpecFANN is also built in a flexible way such that if users have thier own trained neural networks, these can be dropped in to replace the provided networks, while still being able to use all of the framework set up here. For details on how the code works, please see the corresponding release paper: (coming soon)
-<!-- [(coming soon)](https://ui.adsabs.harvard.edu/abs/2020arXiv200309008A/abstract) -->
+SpecFANN (Spectroscopic Fitting via Artificial Neural Networks) is a deep learning based FASTWIND emulator and spectroscopic fitting suite written in Python.  Using a series of neural networks trained to emulate individual FASTWIND line profiles, SpecFANN allows the user to very quickly produce forward models for any subset of the ~140 included spectral lines, and allows the user to fit observed spectra using various minimization techniques and samplers. SpecFANN is also built in a flexible way such that if users have thier own trained neural networks, these can be dropped in to replace the provided networks, while still being able to use all of the framework set up here. For details on how the code works, please see the corresponding release paper: [(Abdul-Masih et al. 2026, A&A, 713, A168)](https://ui.adsabs.harvard.edu/abs/2020arXiv200309008A/abstract)
 
 Installation
 ------------
@@ -58,6 +57,10 @@ We've prepared a jupyter notebook that shows the SpecFANN workflow, and what cus
 
 Change Log
 ---------------
+### 1.1.0a
+
+* alpha release of binary module
+* added support for SB1, SB2 and composite modes 
 
 ### 1.0.1
 

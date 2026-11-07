@@ -16,7 +16,7 @@ class composite(object):
     """
 
     def __init__(self, bundle_path=None, bundle_name=None):
-        default_bundle_name = 'MW_v1.4'
+        default_bundle_name = 'MW_v1.5a'
 
         self.observed_wavelength = None
         self.observed_flux = None

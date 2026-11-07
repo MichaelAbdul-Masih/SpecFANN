@@ -16,7 +16,7 @@ class SB1(object):
     """
 
     def __init__(self, bundle_path=None, bundle_name=None):
-        default_bundle_name = 'MW_v1.4'
+        default_bundle_name = 'MW_v1.5a'
 
         self.observed_wavelengths = []
         self.observed_fluxes = []
@@ -312,7 +312,7 @@ class SB1(object):
         fitting.plot_MCMC_results(self, sampler, burnin, thin, save_path)
 
 
-    def plot_MCMC_fit(self, sampler = None, burnin=100, save_path=None, line_labels=None, component_labels=None):
+    def plot_MCMC_fit(self, time=None, sampler = None, burnin=100, save_path=None, line_labels=None, component_labels=None):
         """
         Plot the MCMC fit results against the observed data.
 
@@ -328,6 +328,14 @@ class SB1(object):
                 raise ValueError("No MCMC sampler found. Run run_mcmc() first.")
             sampler = self.emcee_sampler
 
+        if times is None:
+            times = self.observed_bjds
+
+        time_inds = np.array([
+            np.where(self.observed_bjds == t)[0][0]
+            for t in np.atleast_1d(times)
+        ])
+
         chains = sampler.get_chain(flat=True, thin=1, discard=burnin)
         log_probs = sampler.get_log_prob(flat=True, thin=1, discard=burnin)
 
@@ -341,20 +349,24 @@ class SB1(object):
         axs = axs.ravel()
 
         model_wavelengths, model_fluxes = self.generate_synthetic_spectra(param_set, use_considered_wavelengths=True)
-        model_mean = np.array(model_fluxes).mean(axis=0)
-        model_std = np.array(model_fluxes).std(axis=0)
+        for t_ind, j in enumerate(time_inds):
+            model_mean = np.array(model_fluxes[t_ind]).mean(axis=0)
+            model_std = np.array(model_fluxes[t_ind]).std(axis=0)
+            
+            for i, line in enumerate(self.line_list.keys()):
+                obs_inds = np.where((self.observed_wavelengths[t_ind] >= self.line_list[line].fit_range[0]) & (self.observed_wavelengths[t_ind] <= self.line_list[line].fit_range[1]))[0]
+                obs_wavelength = self.observed_wavelengths[t_ind][obs_inds]
+                obs_flux = self.observed_fluxes[t_ind][obs_inds]
+                
+                line_model_wavelengths = model_wavelengths[t_ind][self._obs_inds_dict[t_ind][line]]
+                line_model_mean = model_mean[self._obs_inds_dict[t_ind][line]]
+                line_model_std = model_std[self._obs_inds_dict[t_ind][line]]
 
-        for i, line in enumerate(self.line_list.keys()):
-            obs_inds = np.where((self.observed_wavelength >= self.line_list[line].fit_range[0]) & (self.observed_wavelength <= self.line_list[line].fit_range[1]))[0]
-            obs_wavelength = self.observed_wavelength[obs_inds]
+                axs[i].plot(obs_wavelength, obs_flux + j*0.1, 'k-', label='Observed')
+                axs[i].plot(line_model_wavelengths, line_model_mean + j*0.1, 'r-', label='Best Fit')
+                axs[i].fill_between(line_model_wavelengths, line_model_mean - line_model_std + j*0.1, line_model_mean + line_model_std + j*0.1, color='lightcoral', alpha=0.8, label='1-sigma')
 
-            line_model_wavelengths = model_wavelengths[self._obs_inds_dict[line]]
-            line_model_mean = model_mean[self._obs_inds_dict[line]]
-            line_model_std = model_std[self._obs_inds_dict[line]]
-
-            axs[i].plot(obs_wavelength, self.observed_flux[obs_inds], 'k-', label='Observed')
-            axs[i].plot(line_model_wavelengths, line_model_mean, 'r-', label='Best Fit')
-            axs[i].fill_between(line_model_wavelengths, line_model_mean-line_model_std, line_model_mean+line_model_std, color='lightcoral', alpha=0.8, label='1-sigma')
+        for i, line in enumerate(self.line_list.keys()): 
             if line_labels:
                 axs[i].text(0.025, 0.025, f'{line}', transform=axs[i].transAxes, fontsize=12, verticalalignment='bottom')
             axs[i].set_xlabel(r'Wavelength ($\mathrm{\AA}$)')
@@ -373,6 +385,8 @@ class SB1(object):
             plt.savefig(save_path)
         else:
             plt.show()
+
+
 
     def print_MCMC_results(self, sampler=None, burnin=100, sigma=1, filename=None):
         """
@@ -424,7 +438,7 @@ class SB1(object):
         fitting.plot_nested_sampling_results(obj, result)
 
 
-    def plot_nested_sampling_fit(self, result=None, n_draw=1000, save_path=None, line_labels=False, component_labels=False):
+    def plot_nested_sampling_fit(self, times = None, result=None, n_draw=1000, save_path=None, line_labels=False, component_labels=False):
         """
         Plot the nested sampling fit results against the observed data.
 
@@ -441,6 +455,14 @@ class SB1(object):
                 raise ValueError("No nested sampling result found. Run run_nested_sampling() first.")
             result = self.ultranest_result
 
+        if times is None:
+            times = self.observed_bjds
+
+        time_inds = np.array([
+            np.where(self.observed_bjds == t)[0][0]
+            for t in np.atleast_1d(times)
+        ])
+
         flat_samples = fitting._get_nested_sampling_posterior_samples(self, result=result, thin=1)
         n_draw = min(n_draw, len(flat_samples))
         inds = np.random.randint(len(flat_samples), size=n_draw)
@@ -452,20 +474,24 @@ class SB1(object):
         axs = axs.ravel()
 
         model_wavelengths, model_fluxes = self.generate_synthetic_spectra(param_set, use_considered_wavelengths=True)
-        model_mean = np.array(model_fluxes).mean(axis=0)
-        model_std = np.array(model_fluxes).std(axis=0)
+        for t_ind, j in enumerate(time_inds):
+            model_mean = np.array(model_fluxes[t_ind]).mean(axis=0)
+            model_std = np.array(model_fluxes[t_ind]).std(axis=0)
+
+            for i, line in enumerate(self.line_list.keys()):
+                obs_inds = np.where((self.observed_wavelengths[t_ind] >= self.line_list[line].fit_range[0]) & (self.observed_wavelengths[t_ind] <= self.line_list[line].fit_range[1]))[0]
+                obs_wavelength = self.observed_wavelengths[t_ind][obs_inds]
+                obs_flux = self.observed_fluxes[t_ind][obs_inds]
+                
+                line_model_wavelengths = model_wavelengths[t_ind][self._obs_inds_dict[t_ind][line]]
+                line_model_mean = model_mean[self._obs_inds_dict[t_ind][line]]
+                line_model_std = model_std[self._obs_inds_dict[t_ind][line]]
+
+                axs[i].plot(obs_wavelength, obs_flux + j*0.1, 'k-', label='Observed')
+                axs[i].plot(line_model_wavelengths, line_model_mean + j*0.1, 'r-', label='Best Fit')
+                axs[i].fill_between(line_model_wavelengths, line_model_mean - line_model_std + j*0.1, line_model_mean + line_model_std + j*0.1, color='lightcoral', alpha=0.8, label='1-sigma')
 
         for i, line in enumerate(self.line_list.keys()):
-            obs_inds = np.where((self.observed_wavelength >= self.line_list[line].fit_range[0]) & (self.observed_wavelength <= self.line_list[line].fit_range[1]))[0]
-            obs_wavelength = self.observed_wavelength[obs_inds]
-            
-            line_model_wavelengths = model_wavelengths[self._obs_inds_dict[line]]
-            line_model_mean = model_mean[self._obs_inds_dict[line]]
-            line_model_std = model_std[self._obs_inds_dict[line]]
-
-            axs[i].plot(obs_wavelength, self.observed_flux[obs_inds], 'k-', label='Observed')
-            axs[i].plot(line_model_wavelengths, line_model_mean, 'r-', label='Best Fit')
-            axs[i].fill_between(line_model_wavelengths, line_model_mean - line_model_std, line_model_mean + line_model_std, color='lightcoral', alpha=0.8, label='1-sigma')
             if line_labels:
                 axs[i].text(0.025, 0.025, f'{line}', transform=axs[i].transAxes, fontsize=12, verticalalignment='bottom')
             axs[i].set_xlabel(r'Wavelength ($\mathrm{\AA}$)')
@@ -475,7 +501,16 @@ class SB1(object):
             for j in range(i+1, len(axs)):
                 axs[j].axis('off')
 
-        plt.show()
+        if self.object_name is not None:
+            plt.suptitle(f'{self.object_name} NS fit', fontsize=16)
+
+        plt.tight_layout()
+
+        if save_path is not None:
+            plt.savefig(save_path)
+        else:
+            plt.show()
+
 
     def print_nested_sampling_results(obj, result=None):
         """
@@ -522,7 +557,7 @@ class SB1(object):
         fitting.plot_GA_results(obj, ga_results, diagnostic, sigma, save_path)
 
 
-    def plot_GA_fit(self, ga_results=None, sigma=2, save_path=None, line_labels=False, component_labels=False):
+    def plot_GA_fit(self, times=None, ga_results=None, sigma=2, save_path=None, line_labels=False, component_labels=False):
         """
         Plot the best-fit model from the genetic algorithm against the observed data.
 
@@ -538,6 +573,14 @@ class SB1(object):
             if not hasattr(self, 'GA_results'):
                 raise ValueError("No GA results found. Run run_GA() first.")
             ga_results = self.GA_results
+
+        if times is None:
+            times = self.observed_bjds
+
+        time_inds = np.array([
+            np.where(self.observed_bjds == t)[0][0]
+            for t in np.atleast_1d(times)
+        ])
 
         best_fit_params = ga_results.best_fit_model
 
@@ -560,22 +603,26 @@ class SB1(object):
         axs = axs.ravel()
 
         model_wavelengths, model_fluxes = self.generate_synthetic_spectra(param_set, use_considered_wavelengths=True)
-        model_mean = np.array(model_fluxes).mean(axis=0)
-        model_std = np.array(model_fluxes).std(axis=0)
+        for t_ind, j in enumerate(time_inds):
+            model_mean = np.array(model_fluxes[t_ind]).mean(axis=0)
+            model_std = np.array(model_fluxes[t_ind]).std(axis=0)
+
+            for i, line in enumerate(self.line_list.keys()):
+                obs_inds = np.where((self.observed_wavelengths[t_ind] >= self.line_list[line].fit_range[0]) & (self.observed_wavelengths[t_ind] <= self.line_list[line].fit_range[1]))[0]
+                obs_wavelength = self.observed_wavelengths[t_ind][obs_inds]
+                obs_flux = self.observed_fluxes[t_ind][obs_inds]
+
+                line_model_wavelengths = model_wavelengths[t_ind][self._obs_inds_dict[t_ind][line]]
+                line_model_fluxes = model_fluxes[t_ind][:, self._obs_inds_dict[t_ind][line]]
+                line_model_mean = model_mean[self._obs_inds_dict[t_ind][line]]
+                line_model_std = model_std[self._obs_inds_dict[t_ind][line]]
+
+
+                axs[i].plot(obs_wavelength, obs_flux + j*0.1, 'k-', label='Observed')
+                axs[i].plot(line_model_wavelengths, line_model_fluxes[-1] + j*0.1, 'r-', label='Best Fit')
+                axs[i].fill_between(line_model_wavelengths, line_model_mean - line_model_std + j*0.1, line_model_mean + line_model_std + j*0.1, color='lightcoral', alpha=0.5, label='1-sigma', zorder=9)
 
         for i, line in enumerate(self.line_list.keys()):
-            obs_inds = np.where((self.observed_wavelength >= self.line_list[line].fit_range[0]) & (self.observed_wavelength <= self.line_list[line].fit_range[1]))[0]
-            obs_wavelength = self.observed_wavelength[obs_inds]
-
-            line_model_wavelengths = model_wavelengths[self._obs_inds_dict[line]]
-            line_model_fluxes = model_fluxes[:, self._obs_inds_dict[line]]
-            line_model_mean = model_mean[self._obs_inds_dict[line]]
-            line_model_std = model_std[self._obs_inds_dict[line]]
-
-
-            axs[i].plot(obs_wavelength, self.observed_flux[obs_inds], 'k-', label='Observed')
-            axs[i].plot(line_model_wavelengths, line_model_fluxes[-1], 'r-', label='Best Fit')
-            axs[i].fill_between(line_model_wavelengths, line_model_mean - line_model_std, line_model_mean + line_model_std, color='lightcoral', alpha=0.5, label='1-sigma', zorder=9)
             if line_labels:
                 axs[i].text(0.025, 0.025, f'{line}', transform=axs[i].transAxes, fontsize=12, verticalalignment='bottom')
             axs[i].set_xlabel(r'Wavelength ($\mathrm{\AA}$)')
