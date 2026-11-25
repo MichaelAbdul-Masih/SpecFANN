@@ -188,7 +188,7 @@ class composite(object):
         return model_gen.generate_model(self, param_set)
     
 
-    def generate_model_per_line(self, line, param_set, observed_wavelength_range=None):
+    def generate_model_per_line(self, line, param_set, observed_wavelength_array=None):
         """
         Generate a model based on the provided parameters.
 
@@ -199,7 +199,7 @@ class composite(object):
         models (dict): A dictionary of models for each line.
         """
 
-        return model_gen.generate_composite_model_per_line(self, line, param_set, observed_wavelength_range)
+        return model_gen.generate_composite_model_per_line(self, line, param_set, observed_wavelength_array)
 
     
     # -------------------Cost functions--------------------

@@ -20,6 +20,29 @@ def calc_phase(period, t0, t):
     return phase
 
 
+def calc_phase_incl_pdot(period, pdot, t0, t):
+    """
+    Calculate the phase of an observation given the period, reference time, period derivative, and observation time.
+
+    Parameters:
+    period (array-like): The period of the orbit in days.
+    pdot (array-like): The period derivative in days/day.
+    t0 (array-like): The reference time in days.
+    t (array-like): The observation times in days.
+
+    Returns:
+    phase (array-like): The calculated phases corresponding to the observation times.
+    """
+    period = np.asarray(period)
+    t0 = np.asarray(t0)
+    pdot = np.asarray(pdot)
+    t = np.asarray(t)
+
+    phase = 1/pdot[:, None] * np.log1p(1 + pdot[:, None] * (t[None, :] - t0[:, None]) / period[:, None])
+    # phase = ((t[None, :] - t0[:, None]) / period[:,None]) % 1
+    return phase
+
+
 def solve_Keplers_equation(E, phis, ecc):
     """
     Solve Kepler's equation for the eccentric anomaly.
@@ -80,6 +103,36 @@ def calc_RVs(period, t0, ecc, omega, K, gamma, t):
     phase = calc_phase(period, t0, t)
     true_anomaly = calc_true_anomaly(phase, ecc)
     RVs = K[:, None] * (np.cos(true_anomaly + omega[:, None]) + ecc[:, None]*np.cos(omega[:, None])) + gamma[:, None]
-    if np.isnan(RVs).any():
-        print(period, t0, ecc, omega, K, gamma, t)
+    # if np.isnan(RVs).any():
+    #     print(period, t0, ecc, omega, K, gamma, t)
+    return RVs
+
+
+
+
+def calc_RVs_incl_apsidal_motion(period, pdot, t0, ecc, omega, omega_dot, K, gamma, t):
+    """
+    Calculate the radial velocities based on the orbital parameters, including apsidal motion, and observation times.
+
+    Parameters:
+    period (array-like): The periods of the orbits in days.
+    pdot (array-like): The period derivatives in days/day.
+    t0 (array-like): The reference times in days.
+    ecc (array-like): The eccentricities.
+    omega (array-like): The arguments of periastron in radians.
+    omega_dot (array-like): The apsidal motion rates in radians/day.
+    K (array-like): The semi-amplitudes in km/s.
+    gamma (array-like): The systemic velocities in km/s.
+    t (array-like): The observation times in days.
+
+    Returns:
+    RVs (array-like): The calculated radial velocities corresponding to the observation times.
+    """
+
+    phase = calc_phase_incl_pdot(period, pdot, t0, t)
+    true_anomaly = calc_true_anomaly(phase, ecc)
+    omega_t = omega[:, None] + omega_dot[:, None] * (t[None, :] - t0[:, None])
+    RVs = K[:, None] * (np.cos(true_anomaly + omega_t) + ecc[:, None]*np.cos(omega_t)) + gamma[:, None]
+    # if np.isnan(RVs).any():
+    #     print(period, pdot, t0, ecc, omega, omega_dot, K, gamma, t)
     return RVs
