@@ -22,6 +22,7 @@ class SB1(object):
         self.observed_fluxes = []
         self.observed_errors = []
         self.observed_bjds = []
+        self.observed_resolutions = []
 
         self.parameters = params.parameters()
         self.parameters.teff = self.parameters.parameter('teff', 40000, bounds=[15000, 60000], latex_string=r'$T_{eff}$', unit=r'K')
@@ -94,7 +95,7 @@ class SB1(object):
     # ----------------------IO----------------------
 
 
-    def load_epoch(self, bjd, observed_wavelength, observed_flux, observed_error=None, snr_region=[4220, 4240]):
+    def load_epoch(self, bjd, observed_wavelength, observed_flux, observed_error=None, resolution = None, snr_region=[4220, 4240]):
         """
         Load the observed data into the class.
 
@@ -103,9 +104,11 @@ class SB1(object):
         observed_wavelength (array-like): The observed wavelengths in Angstroms.
         observed_flux (array-like): The observed flux values corresponding to the wavelengths.
         observed_error (array-like, optional): The errors in the observed flux values. If not provided, errors will be estimated based on the SNR of the data.
+        resolution (float): The resolving power of the observed spectrum.
         snr_region (list, optional): The wavelength region to use for SNR calculation. Default is [4220, 4240].
         """
         self.observed_bjds.append(bjd)
+        self.observed_resolutions.append(resolution)
         w, f, e = io_functions.load_observed_data(observed_wavelength, observed_flux, observed_error, snr_region)
         self.observed_wavelengths.append(w)
         self.observed_fluxes.append(f)

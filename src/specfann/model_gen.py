@@ -351,7 +351,7 @@ def generate_SB1_model_per_line(obj, line, param_set, observed_wavelength_arrays
         model_fluxes = obj.sbf.predict_fluxes_from_nn(obj.parameters, obj.line_list, line, param_set)
 
         # Broaden the lines
-        broadened_wavelength, broadened_fluxes = broaden_lines(obj.line_list[line].wavelength, model_fluxes, param_set[:, vrot_ind], param_set[:, vmacro_ind], param_set[:, inst_res_ind])
+        broadened_wavelength, broadened_fluxes = broaden_lines(obj.line_list[line].wavelength, model_fluxes, param_set[:, vrot_ind], param_set[:, vmacro_ind], inst_res = None)
     else:
         # Use the neural network to predict the fluxes for the line and apply broadening
         broadened_wavelength, broadened_fluxes = obj.sbf.predict_fluxes_from_nn(obj.parameters, obj.line_list, line, param_set)
@@ -375,17 +375,22 @@ def generate_SB1_model_per_line(obj, line, param_set, observed_wavelength_arrays
     for i, rv in enumerate(rvs.T):
         shifted_wavelength = dopler_shift_lines(broadened_wavelength, rv)
 
+        if obj.observed_resolutions[i] is not None:
+            inst_broadened_wavelength, inst_broadened_fluxes = inst_broadening_vectorized(shifted_wavelength, broadened_fluxes, obj.observed_resolutions[i])
+        else:
+            inst_broadened_wavelength, inst_broadened_fluxes = inst_broadening_vectorized(shifted_wavelength, broadened_fluxes, param_set[:, inst_res_ind])
+
         if observed_wavelength_arrays is not None:
-            interp_fluxes = np.empty((len(shifted_wavelength), len(observed_wavelength_arrays[i])))
+            interp_fluxes = np.empty((len(inst_broadened_wavelength), len(observed_wavelength_arrays[i])))
             for j in range(len(interp_fluxes)):
-                interp_fluxes[j] = np.interp(observed_wavelength_arrays[i], shifted_wavelength[j], broadened_fluxes[j], left=1.0, right=1.0)
+                interp_fluxes[j] = np.interp(observed_wavelength_arrays[i], inst_broadened_wavelength[j], inst_broadened_fluxes[j], left=1.0, right=1.0)
             shifted_wavelengths.append(observed_wavelength_arrays[i])
             shifted_fluxes.append(interp_fluxes)
         else:
-            common_wavelength = np.arange(np.min(shifted_wavelength), np.max(shifted_wavelength), 0.01)
-            interp_fluxes = np.empty((len(shifted_wavelength), len(common_wavelength)))
-            for j in range(len(shifted_wavelength)):
-                interp_fluxes[j] = np.interp(common_wavelength, shifted_wavelength[j], broadened_fluxes[j], left=1.0, right=1.0)
+            common_wavelength = np.arange(np.min(inst_broadened_wavelength), np.max(inst_broadened_wavelength), 0.01)
+            interp_fluxes = np.empty((len(inst_broadened_wavelength), len(common_wavelength)))
+            for j in range(len(inst_broadened_wavelength)):
+                interp_fluxes[j] = np.interp(common_wavelength, inst_broadened_wavelength[j], inst_broadened_fluxes[j], left=1.0, right=1.0)
             shifted_wavelengths.append(common_wavelength)
             shifted_fluxes.append(interp_fluxes)
 
@@ -449,7 +454,10 @@ def generate_SB2_model_per_line(obj, line, param_set, observed_wavelength_arrays
     for i in range(len(obj.observed_bjds)):
         combined_wavelength, combined_fluxes = combine_binary_lines(broadened_wavelength_1, broadened_fluxes_1, broadened_wavelength_2, broadened_fluxes_2, rvs_1.T[i], rvs_2.T[i], param_set[:, lr1_ind])
 
-        inst_broadened_wavelength, inst_broadened_fluxes = inst_broadening_vectorized(combined_wavelength, combined_fluxes, param_set[:, inst_res_ind])
+        if obj.observed_resolutions[i] is not None:
+            inst_broadened_wavelength, inst_broadened_fluxes = inst_broadening_vectorized(combined_wavelength, combined_fluxes, obj.observed_resolutions[i])
+        else:
+            inst_broadened_wavelength, inst_broadened_fluxes = inst_broadening_vectorized(combined_wavelength, combined_fluxes, param_set[:, inst_res_ind])
 
         if observed_wavelength_arrays is not None:
             interp_fluxes = np.empty((len(inst_broadened_fluxes), len(observed_wavelength_arrays[i])))
